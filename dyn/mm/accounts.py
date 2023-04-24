@@ -151,7 +151,7 @@ class Account(object):
                     x[1:] in valid}
         response = MMSession.get_session().execute(self.uri, 'POST', api_args)
         for key, val in response.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _get(self):
         """Retrieve an existing :class:`~dyn.mm.accounts.Account` from the Dyn
@@ -170,7 +170,7 @@ class Account(object):
         """Update the fields in this object with the provided data dict"""
         resp = MMSession.get_session().execute(self.uri, 'POST', data)
         for key, val in resp.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def xheaders(self):
@@ -405,9 +405,7 @@ class Account(object):
         uri = '/accounts/xheaders'
         api_args = {}
         response = MMSession.get_session().execute(uri, 'GET', api_args)
-        xheaders = {}
-        for key, val in response.items():
-            xheaders[key] = val
+        xheaders = dict(response.items())
         self._xheaders = APIDict(MMSession.get_session, '/accounts/xheaders',
                                  xheaders)
 
@@ -421,7 +419,7 @@ class Account(object):
 
     def __str__(self):
         """str override"""
-        return '<MM Account>: {}'.format(self._username)
+        return f'<MM Account>: {self._username}'
     __repr__ = __unicode__ = __str__
 
 
@@ -447,7 +445,7 @@ class ApprovedSender(object):
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
         elif len(args) + len(kwargs) > 0:
             self._post(*args, **kwargs)
         else:
@@ -464,7 +462,7 @@ class ApprovedSender(object):
                     'seeding': self._seeding}
         response = MMSession.get_session().execute(self.uri, 'POST', api_args)
         for key, val in response.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _get(self):
         """Get an existing :class:`~dyn.mm.accounts.ApprovedSender` from the
@@ -474,7 +472,7 @@ class ApprovedSender(object):
         api_args = {'emailaddress': self._emailaddress}
         response = MMSession.get_session().execute(uri, 'GET', api_args)
         for key, val in response.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _update(self, api_args):
         """Update this :class:`~dyn.mm.accounts.ApprovedSender` object."""
@@ -482,7 +480,7 @@ class ApprovedSender(object):
             api_args['emailaddress'] = self._emailaddress
         response = MMSession.get_session().execute(self.uri, 'POST', api_args)
         for key, val in response.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def seeding(self):
@@ -498,7 +496,7 @@ class ApprovedSender(object):
 
     @seeding.setter
     def seeding(self, value):
-        if value in range(0, 2):
+        if value in range(2):
             self._update({'seeding': value})
 
     @property
@@ -531,7 +529,7 @@ class ApprovedSender(object):
         api_args = {'emailaddress': self._emailaddress, 'dkim': value}
         response = MMSession.get_session().execute(uri, 'POST', api_args)
         for key, val in response.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def spf(self):
@@ -559,7 +557,7 @@ class ApprovedSender(object):
 
     def __str__(self):
         """str override"""
-        return '<MM ApprovedSender>: {}'.format(self._emailaddress)
+        return f'<MM ApprovedSender>: {self._emailaddress}'
     __repr__ = __unicode__ = __str__
 
 
@@ -629,7 +627,7 @@ class Suppression(object):
                 if key == 'suppresstime':
                     self._suppresstime = str_to_date(val)
                 else:
-                    setattr(self, '_' + key, val)
+                    setattr(self, f'_{key}', val)
         elif len(args) + len(kwargs) == 0:
             self._post()
 
@@ -650,7 +648,7 @@ class Suppression(object):
         else:
             api_args = None
 
-        uri = self.uri + '/count'
+        uri = f'{self.uri}/count'
         response = MMSession.get_session().execute(uri, 'GET', api_args)
         self._count = int(response['count'])
         return self._count
@@ -672,6 +670,6 @@ class Suppression(object):
         :class:`~dyn.mm.accounts.Recipient`, but you will be permitted to send
         to them again.
         """
-        uri = self.uri + '/activate'
+        uri = f'{self.uri}/activate'
         api_args = {'emailaddress': self.emailaddress}
         MMSession.get_session().execute(uri, 'POST', api_args)

@@ -45,7 +45,7 @@ def get_dnssec_timeline(zone_name, start_ts=None, end_ts=None):
         api_args['start_ts'] = unix_date(start_ts)
     if end_ts is not None:
         api_args['end_ts'] = unix_date(end_ts)
-    elif end_ts is None and start_ts is not None:
+    elif start_ts is not None:
         api_args['end_ts'] = unix_date(datetime.now())
     response = DynectSession.get_session().execute('/DNSSECTimelineReport/',
                                                    'POST', api_args)

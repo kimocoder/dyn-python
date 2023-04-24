@@ -47,10 +47,7 @@ def get_all_zones():
     uri = '/Zone/'
     api_args = {'detail': 'Y'}
     response = DynectSession.get_session().execute(uri, 'GET', api_args)
-    zones = []
-    for zone in response['data']:
-        zones.append(Zone(zone['zone'], api=False, **zone))
-    return zones
+    return [Zone(zone['zone'], api=False, **zone) for zone in response['data']]
 
 
 def get_all_secondary_zones():
@@ -62,10 +59,10 @@ def get_all_secondary_zones():
     uri = '/Secondary/'
     api_args = {'detail': 'Y'}
     response = DynectSession.get_session().execute(uri, 'GET', api_args)
-    zones = []
-    for zone in response['data']:
-        zones.append(SecondaryZone(zone.pop('zone'), api=False, **zone))
-    return zones
+    return [
+        SecondaryZone(zone.pop('zone'), api=False, **zone)
+        for zone in response['data']
+    ]
 
 
 def get_apex(node_name, full_details=False):
@@ -80,13 +77,10 @@ def get_apex(node_name, full_details=False):
         :const:`False`, a :const:`dict` containing apex zone name otherwise
     """
 
-    uri = '/Apex/{}'.format(node_name)
+    uri = f'/Apex/{node_name}'
     api_args = {}
     response = DynectSession.get_session().execute(uri, 'GET', api_args)
-    if full_details:
-        return response['data']
-    else:
-        return response['data']['zone']
+    return response['data'] if full_details else response['data']['zone']
 
 
 class Zone(object):
@@ -121,14 +115,14 @@ class Zone(object):
         self.records = {}
         self._task_id = None
         self.services = {}
-        self.uri = '/Zone/{}/'.format(self._name)
+        self.uri = f'/Zone/{self._name}/'
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
                 self._name = self._zone
-                self.uri = '/Zone/{}/'.format(self._name)
-        elif len(args) == 0 and len(kwargs) == 0:
+                self.uri = f'/Zone/{self._name}/'
+        elif not args and not kwargs:
             self._get()
         else:
             self._post(*args, **kwargs)
@@ -169,22 +163,20 @@ class Zone(object):
         if file_size > 1048576:
             raise DynectInvalidArgumentError('Zone File Size', file_size,
                                              'Under 1MB')
-        else:
-            uri = '/ZoneFile/{}/'.format(self.name)
-            f = open(full_path, 'r')
+        uri = f'/ZoneFile/{self.name}/'
+        with open(full_path, 'r') as f:
             content = f.read()
-            f.close()
-            api_args = {'file': content}
-            response = DynectSession.get_session().execute(
-                uri, 'POST', api_args)
-            self.__poll_for_get()
-            self._build(response['data'])
+        api_args = {'file': content}
+        response = DynectSession.get_session().execute(
+            uri, 'POST', api_args)
+        self.__poll_for_get()
+        self._build(response['data'])
 
     def _xfer(self, master_ip, timeout=None):
         """Create a :class:`Zone` by ZoneTransfer by providing an optional
         master_ip argument.
         """
-        uri = '/ZoneTransfer/{}/'.format(self.name)
+        uri = f'/ZoneTransfer/{self.name}/'
         api_args = {'master_ip': master_ip}
         response = DynectSession.get_session().execute(uri, 'POST', api_args)
         self._build(response['data'])
@@ -192,11 +184,10 @@ class Zone(object):
         count = 0
         while count < time_out:
             response = DynectSession.get_session().execute(uri, 'GET', {})
-            if response['status'] == 'running' and response['message'] == '':
-                sleep(60)
-                count += 1
-            else:
+            if response['status'] != 'running' or response['message'] != '':
                 break
+            sleep(60)
+            count += 1
         self._get()
 
     def __poll_for_get(self, n_loops=10, xfer=False, xfer_master_ip=None):
@@ -215,7 +206,7 @@ class Zone(object):
                 sleep(2)
                 count += 1
         if not got and xfer:
-            uri = '/ZoneTransfer/{}/'.format(self.name)
+            uri = f'/ZoneTransfer/{self.name}/'
             api_args = {}
             if xfer_master_ip is not None:
                 api_args['master_ip'] = xfer_master_ip
@@ -227,8 +218,6 @@ class Zone(object):
                 raise DynectCreateError(response['msgs'])
             elif response['data']['status'] in ok_labels:
                 self._get()
-            else:
-                pass  # Should never get here
 
     def _get(self):
         """Get an existing :class:`Zone` object from the DynECT System"""
@@ -246,7 +235,7 @@ class Zone(object):
             elif key == "task_id":
                 self._task_id = Task(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     def _update(self, api_args):
         """Update this :class:`ActiveFailover`, via the API, with the args in
@@ -410,7 +399,7 @@ class Zone(object):
         :param args: Non-keyword arguments to pass to the Record constructor
         :param kwargs: Keyword arguments to pass to the Record constructor
         """
-        fqdn = name + '.' + self.name + '.' if name else self.name + '.'
+        fqdn = f'{name}.{self.name}.' if name else f'{self.name}.'
         # noinspection PyCallingNonCallable
         rec = RECS[record_type](self.name, fqdn, *args, **kwargs)
         if record_type in self.records:
@@ -440,9 +429,9 @@ class Zone(object):
                         'RDNS': ReverseDNS,
                         'RTTM': RTTM,
                         'HTTPRedirect': HTTPRedirect}
-        fqdn = self.name + '.'
+        fqdn = f'{self.name}.'
         if name:
-            fqdn = name + '.' + fqdn
+            fqdn = f'{name}.{fqdn}'
         if service_type == 'DNSSEC':
             # noinspection PyCallingNonCallable
             service = constructors[service_type](self.name, *args, **kwargs)
@@ -461,12 +450,14 @@ class Zone(object):
         the Zone itself.)
         """
         api_args = {}
-        uri = '/NodeList/{}/'.format(self._name)
+        uri = f'/NodeList/{self._name}/'
         response = DynectSession.get_session().execute(uri, 'GET',
                                                        api_args)
-        nodes = [Node(self._name, fqdn) for fqdn in response['data'] if
-                 fqdn != self._name]
-        return nodes
+        return [
+            Node(self._name, fqdn)
+            for fqdn in response['data']
+            if fqdn != self._name
+        ]
 
     def get_node(self, node=None):
         """Returns all DNS Records for that particular node
@@ -474,10 +465,7 @@ class Zone(object):
         :param node: The name of the Node you wish to access, or `None` to get
             the root :class:`Node` of this :class:`Zone`
         """
-        if node:
-            fqdn = node + '.' + self.name + '.'
-        else:
-            fqdn = self.name + '.'
+        fqdn = f'{node}.{self.name}.' if node else f'{self.name}.'
         return Node(self.name, fqdn)
 
     def get_all_records(self):
@@ -489,9 +477,9 @@ class Zone(object):
             :class:`Zone`
         """
         self.records = {}
-        uri = '/AllRecord/{}/'.format(self._name)
+        uri = f'/AllRecord/{self._name}/'
         if self.fqdn is not None:
-            uri += '{}/'.format(self.fqdn)
+            uri += f'{self.fqdn}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         # Strip out empty record_type lists
@@ -541,7 +529,7 @@ class Zone(object):
                  'TLSARecord', 'TXT': 'TXTRecord', 'SSHFP': 'SSHFPRecord'}
 
         constructor = RECS[record_type]
-        uri = '/{}/{}/{}/'.format(names[record_type], self._name, self.fqdn)
+        uri = f'/{names[record_type]}/{self._name}/{self.fqdn}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         records = []
@@ -564,7 +552,7 @@ class Zone(object):
         if self.fqdn is None:
             return
         api_args = {'detail': 'Y'}
-        uri = '/ANYRecord/{}/{}/'.format(self._name, self.fqdn)
+        uri = f'/ANYRecord/{self._name}/{self.fqdn}/'
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         # Strip out empty record_type lists
         record_lists = {label: rec_list for label, rec_list in
@@ -595,7 +583,7 @@ class Zone(object):
 
         :return: A :class:`List` of :class:`ActiveFailover` Services
         """
-        uri = '/Failover/{}/'.format(self._name)
+        uri = f'/Failover/{self._name}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         afos = []
@@ -612,7 +600,7 @@ class Zone(object):
 
         :return: A :class:`List` of :class:`DDNS` Services
         """
-        uri = '/DDNS/{}/'.format(self._name)
+        uri = f'/DDNS/{self._name}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         ddnses = []
@@ -629,7 +617,7 @@ class Zone(object):
 
         :return: A :class:`List` of :class:`HTTPRedirect` Services
         """
-        uri = '/HTTPRedirect/{}/'.format(self._name)
+        uri = f'/HTTPRedirect/{self._name}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         httpredirs = []
@@ -647,7 +635,7 @@ class Zone(object):
 
         :return: A :class:`List` of :class:`AdvancedRedirect` Services
         """
-        uri = '/AdvRedirect/{}/'.format(self._name)
+        uri = f'/AdvRedirect/{self._name}/'
         api_args = {'rules': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         advredirs = []
@@ -665,7 +653,7 @@ class Zone(object):
 
         :return: A :class:`List` of :class:`GSLB` Services
         """
-        uri = '/GSLB/{}/'.format(self._name)
+        uri = f'/GSLB/{self._name}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         gslbs = []
@@ -681,7 +669,7 @@ class Zone(object):
 
         :return: A :class:`List` of :class:`ReverseDNS` Services
         """
-        uri = '/IPTrack/{}/'.format(self._name)
+        uri = f'/IPTrack/{self._name}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         rdnses = []
@@ -698,7 +686,7 @@ class Zone(object):
 
         :return: A :class:`List` of :class:`RTTM` Services
         """
-        uri = '/RTTM/{}/'.format(self._name)
+        uri = f'/RTTM/{self._name}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         rttms = []
@@ -783,14 +771,14 @@ class SecondaryZone(object):
         """
         super(SecondaryZone, self).__init__()
         self._zone = self._name = zone
-        self.uri = '/Secondary/{}/'.format(self._zone)
+        self.uri = f'/Secondary/{self._zone}/'
         self._masters = self._contact_nickname = self._tsig_key_name = None
         self._task_id = None
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
-        elif len(args) == 0 and len(kwargs) == 0:
+                setattr(self, f'_{key}', val)
+        elif not args and not kwargs:
             self._get()
         else:
             self._post(*args, **kwargs)
@@ -835,7 +823,7 @@ class SecondaryZone(object):
             elif key == "task_id":
                 self._task_id = Task(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     @property
     def task(self):
@@ -917,7 +905,7 @@ class SecondaryZone(object):
     def delete(self):
         """Delete this :class:`SecondaryZone`"""
         api_args = {}
-        uri = '/Zone/{}/'.format(self._zone)
+        uri = f'/Zone/{self._zone}/'
         DynectSession.get_session().execute(uri, 'DELETE', api_args)
 
     @property
@@ -930,7 +918,7 @@ class SecondaryZone(object):
     def serial(self):
         """Reports the serial of :class:`SecondaryZone`"""
         api_args = {}
-        uri = '/Zone/{}/'.format(self._zone)
+        uri = f'/Zone/{self._zone}/'
         self._update(api_args, uri)
         return self._serial
 
@@ -961,7 +949,7 @@ class Node(object):
         """
         super(Node, self).__init__()
         self.zone = zone
-        self.fqdn = fqdn or self.zone + '.'
+        self.fqdn = fqdn or f'{self.zone}.'
         self.records = self.my_records = {}
         self.services = []
 
@@ -1013,9 +1001,9 @@ class Node(object):
         point on the zone hierarchy
         """
         self.records = {}
-        uri = '/AllRecord/{}/'.format(self.zone)
+        uri = f'/AllRecord/{self.zone}/'
         if self.fqdn is not None:
-            uri += '{}/'.format(self.fqdn)
+            uri += f'{self.fqdn}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         # Strip out empty record_type lists
@@ -1065,8 +1053,7 @@ class Node(object):
                  'TXT': 'TXTRecord', 'SSHFP': 'SSHFPRecord',
                  'ALIAS': 'ALIASRecord'}
         constructor = RECS[record_type]
-        uri = '/{}/{}/{}/'.format(names[record_type], self.zone,
-                                  self.fqdn)
+        uri = f'/{names[record_type]}/{self.zone}/{self.fqdn}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         records = []
@@ -1087,7 +1074,7 @@ class Node(object):
         if self.fqdn is None:
             return
         api_args = {'detail': 'Y'}
-        uri = '/ANYRecord/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/ANYRecord/{self.zone}/{self.fqdn}/'
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         # Strip out empty record_type lists
         record_lists = {label: rec_list for label, rec_list in
@@ -1116,7 +1103,7 @@ class Node(object):
         """Delete this node, any records within this node, and any nodes
         underneath this node
         """
-        uri = '/Node/{}/{}'.format(self.zone, self.fqdn)
+        uri = f'/Node/{self.zone}/{self.fqdn}'
         DynectSession.get_session().execute(uri, 'DELETE', {})
 
     def __str__(self):
@@ -1143,13 +1130,14 @@ class TSIG(object):
         :param secret: Secret key used by :class:`TSIG` object
         """
         self._name = name
-        self.uri = '/TSIGKey/{}/'.format(self._name)
+        self.uri = f'/TSIGKey/{self._name}/'
         self._secret = None
         self._algorithm = None
-        if len(args) == 0 and len(kwargs) == 0:
-            self._get()
-        else:
+        if args or kwargs:
             self._post(*args, **kwargs)
+
+        else:
+            self._get()
 
     def _get(self):
         """Get a :class:`TSIG` object from the DynECT System"""
@@ -1157,7 +1145,7 @@ class TSIG(object):
         response = DynectSession.get_session().execute(self.uri, 'GET',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _post(self, *args, **kwargs):
         """Create a new :class:`TSIG` object on the DynECT System"""
@@ -1166,7 +1154,7 @@ class TSIG(object):
         response = DynectSession.get_session().execute(self.uri, 'POST',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def secret(self):
@@ -1184,7 +1172,7 @@ class TSIG(object):
         response = DynectSession.get_session().execute(self.uri, 'PUT',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def algorithm(self):
@@ -1203,7 +1191,7 @@ class TSIG(object):
         response = DynectSession.get_session().execute(self.uri, 'PUT',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def name(self):
@@ -1231,16 +1219,17 @@ class ExternalNameserver(object):
 
         """
         self._zone = zone
-        self.uri = '/ExtNameserver/{}/'.format(self._zone)
+        self.uri = f'/ExtNameserver/{self._zone}/'
         self._deny = None
         self._hosts = None
         self._active = None
         self._tsig_key_name = None
 
-        if len(args) == 0 and len(kwargs) == 0:
-            self._get()
-        else:
+        if args or kwargs:
             self._post(*args, **kwargs)
+
+        else:
+            self._get()
 
     def _get(self):
         """Get a :class:`ExternalNameserver` object from the DynECT System"""
@@ -1267,7 +1256,7 @@ class ExternalNameserver(object):
 
         self._hosts = kwargs.get('hosts', None)
         if self._hosts:
-            api_args['hosts'] = list()
+            api_args['hosts'] = []
             for host in self._hosts:
                 if isinstance(host, ExternalNameserverEntry):
                     api_args['hosts'].append(host._json)
@@ -1293,7 +1282,7 @@ class ExternalNameserver(object):
                     self._hosts.append(ExternalNameserverEntry(
                         host['address'], notifies=host['notifies']))
                 continue
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def deny(self):
@@ -1335,8 +1324,7 @@ class ExternalNameserver(object):
 
     @hosts.setter
     def hosts(self, value):
-        api_args = dict()
-        api_args['hosts'] = list()
+        api_args = {'hosts': []}
         for host in value:
             if isinstance(host, ExternalNameserverEntry):
                 api_args['hosts'].append(host._json)

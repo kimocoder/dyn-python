@@ -119,13 +119,12 @@ class DynectSession(SessionEngine):
                 raise DynectUpdateError(response['msgs'])
             else:
                 raise DynectDeleteError(response['msgs'])
-        else:  # Status was incomplete
+        elif not final:
             job_id = response['job_id']
-            if not final:
-                response = self.wait_for_job_to_complete(job_id)
-                return self._process_response(response, method, True)
-            else:
-                raise DynectQueryTimeout({})
+            response = self.wait_for_job_to_complete(job_id)
+            return self._process_response(response, method, True)
+        else:
+            raise DynectQueryTimeout({})
 
     def update_password(self, new_password):
         """Update the current users password
@@ -143,15 +142,13 @@ class DynectSession(SessionEngine):
         :param user_name: The user whose permissions will be returned. Defaults
             to the current user
         """
-        api_args = dict()
-        api_args['user_name'] = user_name or self.username
+        api_args = {'user_name': user_name or self.username}
         uri = '/UserPermissionReport/'
         response = self.execute(uri, 'POST', api_args)
         permissions = []
         for key, val in response['data'].items():
             if key == 'allowed':
-                for permission in val:
-                    permissions.append(permission['name'])
+                permissions.extend(permission['name'] for permission in val)
         return permissions
 
     @property
@@ -280,14 +277,13 @@ class DynectMultiSession(DynectSession):
             self._token = candidate_session[0]['token']
             self.authenticate()
 
-        else:
-            if customer:
-                raise ValueError("No open sessions for\
+        elif customer:
+            raise ValueError("No open sessions for\
                      customer {0}, user {1}".format(
-                    customer, username))
-            else:
-                raise ValueError("No open sessions for user {0}".format(
-                    username))
+                customer, username))
+        else:
+            raise ValueError("No open sessions for user {0}".format(
+                username))
 
     def new_user_session(self, customer, username, password):
         """Authenticate a new user"""

@@ -116,11 +116,11 @@ class DNSSEC(object):
         self._contact_nickname = self._notify_events = None
         self._keys = APIList(DynectSession.get_session, 'keys')
         self._active = None
-        self.uri = '/DNSSEC/{}/'.format(self._zone)
+        self.uri = f'/DNSSEC/{self._zone}/'
         if 'api' in kwargs:
             del kwargs['api']
             self._build(kwargs)
-        elif len(args) == 0 and len(kwargs) == 0:
+        elif not args and not kwargs:
             self._get()
         else:
             self._post(*args, **kwargs)
@@ -134,12 +134,13 @@ class DNSSEC(object):
         api_args = {'keys': [key._json for key in self._keys],
                     'contact_nickname': self._contact_nickname}
         for key, val in self.__dict__.items():
-            if val is not None and not hasattr(val, '__call__') and \
-                    key.startswith('_'):
-                if key == '_user_name' or key == '_keys':
-                    pass
-                else:
-                    api_args[key[1:]] = val
+            if (
+                val is not None
+                and not hasattr(val, '__call__')
+                and key.startswith('_')
+                and key not in ['_user_name', '_keys']
+            ):
+                api_args[key[1:]] = val
         # Need to cast to CSV for API
         if self._notify_events is not None:
             api_args['notify_events'] = ','.join(self._notify_events)
@@ -161,17 +162,17 @@ class DNSSEC(object):
         the data returned
         """
         for key, val in data.items():
-            if key == 'keys':
+            if key == 'active':
+                self._active = Active(val)
+            elif key == 'keys':
                 self._keys = APIList(DynectSession.get_session, 'keys')
                 for key_data in val:
                     key_data['key_type'] = key_data['type']
                     del key_data['type']
                     self._keys.append(DNSSECKey(**key_data))
-            elif key == 'active':
-                self._active = Active(val)
             else:
-                setattr(self, '_' + key, val)
-        self.uri = '/DNSSEC/{}/'.format(self._zone)
+                setattr(self, f'_{key}', val)
+        self.uri = f'/DNSSEC/{self._zone}/'
         self._keys.uri = self.uri
 
     @property
@@ -290,7 +291,7 @@ class DNSSEC(object):
             api_args['start_ts'] = unix_date(start_ts)
         if end_ts is not None:
             api_args['end_ts'] = unix_date(end_ts)
-        elif end_ts is None and start_ts is not None:
+        elif start_ts is not None:
             api_args['end_ts'] = unix_date(datetime.now())
         uri = '/DNSSECTimelineReport/'
         response = DynectSession.get_session().execute(uri, 'POST', api_args)

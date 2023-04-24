@@ -67,12 +67,7 @@ class Monitor(object):
         :param other: the value to compare this :class:`HealthMonitor` to.
             Valid input types: `dict`, :class:`HealthMonitor`
         """
-        if isinstance(other, dict):
-            return False
-        elif isinstance(other, Monitor):
-            return False
-        else:
-            return False
+        return False
 
     @property
     def status(self):
@@ -80,7 +75,7 @@ class Monitor(object):
         DynECT System
         """
         api_args = {}
-        uri = '/Failover/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/Failover/{self.zone}/{self.fqdn}/'
         respnose = DynectSession.get_session().execute(uri, 'GET', api_args)
         return respnose['data']['status']
 
@@ -95,7 +90,7 @@ class Monitor(object):
             raise Exception
         self._protocol = value
         api_args = {'monitor': {'protocol': self._protocol}}
-        uri = '/Failover/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/Failover/{self.zone}/{self.fqdn}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     @property
@@ -109,7 +104,7 @@ class Monitor(object):
             raise Exception
         self._interval = value
         api_args = {'monitor': {'interval': self._interval}}
-        uri = '/Failover/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/Failover/{self.zone}/{self.fqdn}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     @property
@@ -123,7 +118,7 @@ class Monitor(object):
     def retries(self, value):
         self._retries = value
         api_args = {'monitor': {'retries': self._retries}}
-        uri = '/Failover/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/Failover/{self.zone}/{self.fqdn}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     @property
@@ -137,7 +132,7 @@ class Monitor(object):
     def timeout(self, value):
         self._timeout = value
         api_args = {'monitor': {'timeout': self._timeout}}
-        uri = '/Failover/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/Failover/{self.zone}/{self.fqdn}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     @property
@@ -149,7 +144,7 @@ class Monitor(object):
     def port(self, value):
         self._port = value
         api_args = {'monitor': {'port': self._port}}
-        uri = '/Failover/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/Failover/{self.zone}/{self.fqdn}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     @property
@@ -161,7 +156,7 @@ class Monitor(object):
     def path(self, value):
         self._path = value
         api_args = {'monitor': {'path': self._path}}
-        uri = '/Failover/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/Failover/{self.zone}/{self.fqdn}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     @property
@@ -173,7 +168,7 @@ class Monitor(object):
     def host(self, value):
         self._host = value
         api_args = {'monitor': {'host': self._host}}
-        uri = '/Failover/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/Failover/{self.zone}/{self.fqdn}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     @property
@@ -187,7 +182,7 @@ class Monitor(object):
     def header(self, value):
         self._header = value
         api_args = {'monitor': {'header': self._header}}
-        uri = '/Failover/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/Failover/{self.zone}/{self.fqdn}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     @property
@@ -202,7 +197,7 @@ class Monitor(object):
     def expected(self, value):
         self._expected = value
         api_args = {'monitor': {'expected': self._expected}}
-        uri = '/Failover/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/Failover/{self.zone}/{self.fqdn}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     def __str__(self):
@@ -248,18 +243,18 @@ class GSLBRegionPoolEntry(object):
         uri = '/GSLBRegionPoolEntry/{}/{}/{}/{}/'
         self.uri = uri.format(self._zone, self._fqdn, self._region_code,
                               self._address)
-        if len(args) == 0 and len(kwargs) == 0:
-            self._get()
-        else:
+        if args or kwargs:
             self._build(kwargs)
+
+        else:
+            self._get()
 
     def _post(self, label=None, weight=None, serve_mode=None):
         """Create a new :class:`GSLBRegionPoolEntry` on the DynECT System"""
         self._label = label
         self._weight = weight
         self._serve_mode = serve_mode
-        uri = '/GSLBRegionPoolEntry/{}/{}/{}/'.format(self._zone, self._fqdn,
-                                                      self._region_code)
+        uri = f'/GSLBRegionPoolEntry/{self._zone}/{self._fqdn}/{self._region_code}/'
         api_args = {'address': self._address}
         if label:
             api_args['label'] = self._label
@@ -300,7 +295,7 @@ class GSLBRegionPoolEntry(object):
             elif key == "task_id":
                 self._task_id = Task(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     @property
     def task(self):
@@ -461,12 +456,11 @@ class GSLBRegion(object):
             raise DynectInvalidArgumentError('region_code', region_code,
                                              self.valid_region_codes)
         self._region_code = region_code
-        self.uri = '/GSLBRegion/{}/{}/{}/'.format(self._zone, self._fqdn,
-                                                  self._region_code)
+        self.uri = f'/GSLBRegion/{self._zone}/{self._fqdn}/{self._region_code}/'
         self._pool = []
-        if len(args) == 0 and len(kwargs) == 0:
+        if not args and not kwargs:
             self._get()
-        if len(kwargs) > 0:
+        if kwargs:
             self._build(kwargs)
         elif len(args) > 0:
             for pool in args[0]:
@@ -485,7 +479,7 @@ class GSLBRegion(object):
         self._serve_count = serve_count
         self._failover_mode = failover_mode
         self._failover_data = failover_data
-        uri = '/GSLBRegion/{}/{}/'.format(self._zone, self._fqdn)
+        uri = f'/GSLBRegion/{self._zone}/{self._fqdn}/'
         api_args = {'pool': self._pool.to_json(),
                     'region_code': self._region_code}
         if serve_count:
@@ -535,7 +529,7 @@ class GSLBRegion(object):
             elif key == "task_id":
                 self._task_id = Task(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     @property
     def task(self):
@@ -718,7 +712,7 @@ class GSLB(object):
                                       'local7')
         self._zone = zone
         self._fqdn = fqdn
-        self.uri = '/GSLB/{}/{}/'.format(self._zone, self._fqdn)
+        self.uri = f'/GSLB/{self._zone}/{self._fqdn}/'
         self._auto_recover = self._ttl = self._notify_events = None
         self._syslog_server = self._syslog_port = self._syslog_ident = None
         self._syslog_facility = self._monitor = self._contact_nickname = None
@@ -730,7 +724,7 @@ class GSLB(object):
         if 'api' in kwargs:
             del kwargs['api']
             self._build(kwargs)
-        elif len(args) == 0 and len(kwargs) == 0:
+        elif not args and not kwargs:
             self._get()
         else:
             self._post(*args, **kwargs)
@@ -819,7 +813,7 @@ class GSLB(object):
             elif key == "task_id":
                 self._task_id = Task(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
         self._region.uri = self.uri
 
     @property

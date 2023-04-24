@@ -131,9 +131,7 @@ class Active(object):
         """The string representation of this :class:`~dyn.tm.utils.Active` will
         return 'Y' or 'N' depending on the value of ``self.value``
         """
-        if self.value:
-            return force_unicode('Y')
-        return force_unicode('N')
+        return force_unicode('Y') if self.value else force_unicode('N')
     __repr__ = __unicode__ = __str__
 
     def __bytes__(self):

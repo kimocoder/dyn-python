@@ -28,16 +28,16 @@ def get_updateusers(search=None):
     uri = '/UpdateUser/'
     api_args = {'detail': 'Y'}
     response = DynectSession.get_session().execute(uri, 'GET', api_args)
-    update_users = []
-    for user in response['data']:
-        update_users.append(UpdateUser(api=False, **user))
+    update_users = [UpdateUser(api=False, **user) for user in response['data']]
     if search is not None:
         original = update_users
         update_users = []
         for uu in original:
-            for key, val in search.items():
-                if hasattr(uu, key) and getattr(uu, key) == val:
-                    update_users.append(uu)
+            update_users.extend(
+                uu
+                for key, val in search.items()
+                if hasattr(uu, key) and getattr(uu, key) == val
+            )
     return update_users
 
 
@@ -59,9 +59,9 @@ def get_users(search=None):
         search_string = ''
         for key, val in search.items():
             if search_string != '':
-                ' AND '.join([search_string, '{}:"{}"'.format(key, val)])
+                ' AND '.join([search_string, f'{key}:"{val}"'])
             else:
-                search_string = '{}:"{}"'.format(key, val)
+                search_string = f'{key}:"{val}"'
         api_args['search'] = search_string
     response = DynectSession.get_session().execute(uri, 'GET', api_args)
     users = []
@@ -90,16 +90,19 @@ def get_permissions_groups(search=None):
     uri = '/PermissionGroup/'
     api_args = {'detail': 'Y'}
     response = DynectSession.get_session().execute(uri, 'GET', api_args)
-    groups = []
-    for group in response['data']:
-        groups.append(PermissionsGroup(None, api=False, **group))
+    groups = [
+        PermissionsGroup(None, api=False, **group)
+        for group in response['data']
+    ]
     if search is not None:
         original = groups
         groups = []
         for group in original:
-            for key, val in search.items():
-                if hasattr(group, key) and getattr(group, key) == val:
-                    groups.append(group)
+            groups.extend(
+                group
+                for key, val in search.items()
+                if hasattr(group, key) and getattr(group, key) == val
+            )
     return groups
 
 
@@ -128,9 +131,11 @@ def get_contacts(search=None):
         original = contacts
         contacts = []
         for contact in original:
-            for key, val in search.items():
-                if hasattr(contact, key) and getattr(contact, key) == val:
-                    contacts.append(contact)
+            contacts.extend(
+                contact
+                for key, val in search.items()
+                if hasattr(contact, key) and getattr(contact, key) == val
+            )
     return contacts
 
 
@@ -149,16 +154,18 @@ def get_notifiers(search=None):
     uri = '/Notifier/'
     api_args = {'detail': 'Y'}
     response = DynectSession.get_session().execute(uri, 'GET', api_args)
-    notifiers = []
-    for notifier in response['data']:
-        notifiers.append(Notifier(None, api=False, **notifier))
+    notifiers = [
+        Notifier(None, api=False, **notifier) for notifier in response['data']
+    ]
     if search is not None:
         original = notifiers
         notifiers = []
         for notifier in original:
-            for key, val in search.items():
-                if hasattr(notifier, key) and getattr(notifier, key) == val:
-                    notifiers.append(notifier)
+            notifiers.extend(
+                notifier
+                for key, val in search.items()
+                if hasattr(notifier, key) and getattr(notifier, key) == val
+            )
     return notifiers
 
 
@@ -192,8 +199,8 @@ class UpdateUser(object):
             good_args = ('user_name', 'status', 'password')
             for key, val in kwargs.items():
                 if key in good_args:
-                    setattr(self, '_' + key, val)
-            self.uri = '/UpdateUser/{}/'.format(self._user_name)
+                    setattr(self, f'_{key}', val)
+            self.uri = f'/UpdateUser/{self._user_name}/'
         elif len(args) + len(kwargs) == 1:
             self._get(*args, **kwargs)
         else:
@@ -210,20 +217,20 @@ class UpdateUser(object):
                     'password': self._password}
         response = DynectSession.get_session().execute(uri, 'POST', api_args)
         self._build(response['data'])
-        self.uri = '/UpdateUser/{}/'.format(self._user_name)
+        self.uri = f'/UpdateUser/{self._user_name}/'
 
     def _get(self, user_name):
         """Get an existing :class:`~dyn.tm.accounts.UpdateUser` from the
         DynECT System
         """
         self._user_name = user_name
-        self.uri = '/UpdateUser/{}/'.format(self._user_name)
+        self.uri = f'/UpdateUser/{self._user_name}/'
         response = DynectSession.get_session().execute(self.uri, 'GET')
         self._build(response['data'])
 
     def _build(self, data):
         for key, val in data.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _update(self, api_args=None):
         response = DynectSession.get_session().execute(self.uri, 'PUT',
@@ -378,7 +385,7 @@ class User(object):
         """
         super(User, self).__init__()
         self._user_name = user_name
-        self.uri = '/User/{}/'.format(self._user_name)
+        self.uri = f'/User/{self._user_name}/'
         self._permission_report_uri = '/UserPermissionReport/'
         self._password = self._email = self._first_name = None
         self._last_name = self._nickname = self._organization = None
@@ -394,10 +401,10 @@ class User(object):
             del kwargs['api']
             for key, val in kwargs.items():
                 if key != '_user_name':
-                    setattr(self, '_' + key, val)
+                    setattr(self, f'_{key}', val)
                 else:
                     setattr(self, key, val)
-        elif len(args) == 0 and len(kwargs) == 0:
+        elif not args and not kwargs:
             self._get()
         else:
             self._post(*args, **kwargs)
@@ -472,7 +479,7 @@ class User(object):
     def _build(self, data):
         """Private build method"""
         for key, val in data.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _get_permission(self):
         api_args = {'user_name': self._user_name}
@@ -481,7 +488,7 @@ class User(object):
         self._build_permission(response)
 
     def _build_permission(self, response):
-        self._zone = list()
+        self._zone = []
         for val in response['data']['allowed']:
             self._permission.append(val['name'])
             for zone in val['zone']:
@@ -729,7 +736,7 @@ class User(object):
     def block(self):
         """Blocks this :class:`~dyn.tm.accounts.User` from logging in"""
         api_args = {'block': 'True'}
-        uri = '/User/{}/'.format(self._user_name)
+        uri = f'/User/{self._user_name}/'
         response = DynectSession.get_session().execute(uri, 'PUT', api_args)
         self._status = response['data']['status']
 
@@ -738,7 +745,7 @@ class User(object):
         re-enables their log-in
         """
         api_args = {'unblock': 'True'}
-        uri = '/User/{}/'.format(self._user_name)
+        uri = f'/User/{self._user_name}/'
         response = DynectSession.get_session().execute(uri, 'PUT', api_args)
         self._status = response['data']['status']
 
@@ -749,8 +756,7 @@ class User(object):
         """
         if permission not in self._permission:
             self._permission.append(permission)
-            uri = '/UserPermissionEntry/{}/{}/'.format(self._user_name,
-                                                       permission)
+            uri = f'/UserPermissionEntry/{self._user_name}/{permission}/'
             DynectSession.get_session().execute(uri, 'POST')
 
     def replace_permission(self, permission=None):
@@ -767,7 +773,7 @@ class User(object):
             self._permission = permission
         else:
             self._permission = []
-        uri = '/UserPermissionEntry/{}/'.format(self._user_name)
+        uri = f'/UserPermissionEntry/{self._user_name}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     def delete_permission(self, permission):
@@ -778,7 +784,7 @@ class User(object):
         """
         if permission in self._permission:
             self._permission.remove(permission)
-        uri = '/UserPermissionEntry/{}/{}/'.format(self._user_name, permission)
+        uri = f'/UserPermissionEntry/{self._user_name}/{permission}/'
         DynectSession.get_session().execute(uri, 'DELETE')
 
     def add_permissions_group(self, group):
@@ -788,7 +794,7 @@ class User(object):
             :class:`~dyn.tm.accounts.User`
         """
         self.permission_groups.append(group)
-        uri = '/UserGroupEntry/{}/{}/'.format(self._user_name, group)
+        uri = f'/UserGroupEntry/{self._user_name}/{group}/'
         DynectSession.get_session().execute(uri, 'POST')
 
     def replace_permissions_group(self, groups=None):
@@ -805,7 +811,7 @@ class User(object):
             self.groups = groups
         else:
             self.groups = []
-        uri = '/UserGroupEntry/{}/'.format(self._user_name)
+        uri = f'/UserGroupEntry/{self._user_name}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     def delete_permissions_group(self, group):
@@ -817,7 +823,7 @@ class User(object):
         """
         if group in self.permission:
             self.permission_groups.remove(group)
-        uri = '/UserGroupEntry/{}/{}/'.format(self._user_name, group)
+        uri = f'/UserGroupEntry/{self._user_name}/{group}/'
         DynectSession.get_session().execute(uri, 'DELETE')
 
     def add_zone(self, zone, recurse='Y'):
@@ -826,12 +832,8 @@ class User(object):
         :param recurse: determine if permissions should be extended to
          subzones.
         """
-        if self._zone is not None:
-            if zone not in self._zone:
-                uri = '/UserZoneEntry/{}/{}/'.format(self._user_name, zone)
-                DynectSession.get_session().execute(uri, 'POST')
-        else:
-            uri = '/UserZoneEntry/{}/{}/'.format(self._user_name, zone)
+        if self._zone is not None and zone not in self._zone or self._zone is None:
+            uri = f'/UserZoneEntry/{self._user_name}/{zone}/'
             DynectSession.get_session().execute(uri, 'POST')
         self._get_permission()
 
@@ -845,7 +847,7 @@ class User(object):
         api_args = {}
         if zones is not None:
             api_args['zone'] = zones
-        uri = '/UserZoneEntry/{}/'.format(self._user_name)
+        uri = f'/UserZoneEntry/{self._user_name}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
         self._get_permission()
 
@@ -855,7 +857,7 @@ class User(object):
 
         :param zone: the zone to remove
         """
-        uri = '/UserZoneEntry/{}/{}/'.format(self._user_name, zone)
+        uri = f'/UserZoneEntry/{self._user_name}/{zone}/'
         DynectSession.get_session().execute(uri, 'DELETE')
         self._get_permission()
 
@@ -870,7 +872,7 @@ class User(object):
         api_args = {}
         if zone is not None:
             api_args['zone'] = zone
-        uri = '/UserForbidEntry/{}/{}/'.format(self._user_name, permission)
+        uri = f'/UserForbidEntry/{self._user_name}/{permission}/'
         DynectSession.get_session().execute(uri, 'POST', api_args)
 
     def replace_forbid_rules(self, forbid=None):
@@ -885,7 +887,7 @@ class User(object):
         api_args = {}
         if forbid is not None:
             api_args['forbid'] = forbid
-        uri = '/UserForbidEntry/{}/'.format(self._user_name)
+        uri = f'/UserForbidEntry/{self._user_name}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     def delete_forbid_rule(self, permission, zone=None):
@@ -898,12 +900,12 @@ class User(object):
         api_args = {}
         if zone is not None:
             api_args['zone'] = zone
-        uri = '/UserForbidEntry/{}/{}/'.format(self._user_name, permission)
+        uri = f'/UserForbidEntry/{self._user_name}/{permission}/'
         DynectSession.get_session().execute(uri, 'DELETE', api_args)
 
     def delete(self):
         """Delete this :class:`~dyn.tm.accounts.User` from the system"""
-        uri = '/User/{}/'.format(self._user_name)
+        uri = f'/User/{self._user_name}/'
         DynectSession.get_session().execute(uri, 'DELETE')
 
     def __str__(self):
@@ -937,12 +939,12 @@ class PermissionsGroup(object):
         self._group_name = group_name
         self._description = self._group_type = self._all_users = None
         self._permission = self._user_name = self._subgroup = self._zone = None
-        self.uri = '/PermissionGroup/{}/'.format(self._group_name)
+        self.uri = f'/PermissionGroup/{self._group_name}/'
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
-        elif len(args) == 0 and len(kwargs) == 0:
+                setattr(self, f'_{key}', val)
+        elif not args and not kwargs:
             self._get()
         else:
             self._post(*args, **kwargs)
@@ -963,22 +965,21 @@ class PermissionsGroup(object):
         # Any fields that were not explicitly set should not be passed through
         for key, val in self.__dict__.items():
             if val is not None and not hasattr(val, '__call__') and \
-                    key.startswith('_'):
+                        key.startswith('_'):
                 if key is '_group_type':
                     api_args['type'] = val
                 else:
                     api_args[key[1:]] = val
-        uri = '/PermissionGroup/{}/'.format(self._group_name)
+        uri = f'/PermissionGroup/{self._group_name}/'
         response = DynectSession.get_session().execute(uri, 'POST', api_args)
         for key, val in response['data'].items():
             if key == 'type':
                 setattr(self, '_group_type', val)
             elif key == 'zone':
                 self._zone = []
-                for zone in val:
-                    self._zone.append(zone['zone_name'])
+                self._zone.extend(zone['zone_name'] for zone in val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     def _get(self):
         """Get an existing :class:`~dyn.tm.accounts.PermissionsGroup` from the
@@ -989,11 +990,9 @@ class PermissionsGroup(object):
             if key == 'type':
                 setattr(self, '_group_type', val)
             elif key == 'zone':
-                self._zone = []
-                for zone in val:
-                    self._zone.append(zone['zone_name'])
+                self._zone = [zone['zone_name'] for zone in val]
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     def _update(self, api_args=None):
         response = DynectSession.get_session().execute(self.uri, 'PUT',
@@ -1002,11 +1001,9 @@ class PermissionsGroup(object):
             if key == 'type':
                 setattr(self, '_group_type', val)
             elif key == 'zone':
-                self._zone = []
-                for zone in val:
-                    self._zone.append(zone['zone_name'])
+                self._zone = [zone['zone_name'] for zone in val]
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     @property
     def group_name(self):
@@ -1020,7 +1017,7 @@ class PermissionsGroup(object):
                     'group_name': self._group_name}
         self._update(api_args)
         self._group_name = new_group_name
-        self.uri = '/PermissionGroup/{}/'.format(self._group_name)
+        self.uri = f'/PermissionGroup/{self._group_name}/'
 
     @property
     def description(self):
@@ -1110,7 +1107,7 @@ class PermissionsGroup(object):
 
     def delete(self):
         """Delete this permission group"""
-        uri = '/PermissionGroup/{}/'.format(self._group_name)
+        uri = f'/PermissionGroup/{self._group_name}/'
         DynectSession.get_session().execute(uri, 'DELETE')
 
     def add_permission(self, permission):
@@ -1118,8 +1115,7 @@ class PermissionsGroup(object):
 
         :param permission: the permission to add to this user
         """
-        uri = '/PermissionGroupPermissionEntry/{}/{}/'.format(self._group_name,
-                                                              permission)
+        uri = f'/PermissionGroupPermissionEntry/{self._group_name}/{permission}/'
         DynectSession.get_session().execute(uri, 'POST')
         self._permission.append(permission)
 
@@ -1132,20 +1128,16 @@ class PermissionsGroup(object):
         api_args = {}
         if permission is not None:
             api_args['permission'] = permission
-        uri = '/PermissionGroupPermissionEntry/{}/'.format(self._group_name)
+        uri = f'/PermissionGroupPermissionEntry/{self._group_name}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
-        if permission:
-            self._permission = permission
-        else:
-            self._permission = []
+        self._permission = permission if permission else []
 
     def remove_permission(self, permission):
         """Removes the specific permission from the user
 
         :param permission: the permission to remove
         """
-        uri = '/PermissionGroupPermissionEntry/{}/{}/'.format(self._group_name,
-                                                              permission)
+        uri = f'/PermissionGroupPermissionEntry/{self._group_name}/{permission}/'
         DynectSession.get_session().execute(uri, 'DELETE')
         self._permission.remove(permission)
 
@@ -1158,7 +1150,7 @@ class PermissionsGroup(object):
             of a Zone to this :class:`~dyn.tm.accounts.PermissionsGroup`
         """
         api_args = {'recurse': recurse}
-        uri = '/PermissionGroupZoneEntry/{}/{}/'.format(self._group_name, zone)
+        uri = f'/PermissionGroupZoneEntry/{self._group_name}/{zone}/'
         DynectSession.get_session().execute(uri, 'POST', api_args)
         self._zone.append(zone)
 
@@ -1170,8 +1162,7 @@ class PermissionsGroup(object):
             to be added to this :class:`~dyn.tm.accounts.PermissionsGroup`'s
             subgroups
         """
-        uri = '/PermissionGroupSubgroupEntry/{}/{}/'.format(self._group_name,
-                                                            name)
+        uri = f'/PermissionGroupSubgroupEntry/{self._group_name}/{name}/'
         DynectSession.get_session().execute(uri, 'POST')
         self._subgroup.append(name)
 
@@ -1182,7 +1173,7 @@ class PermissionsGroup(object):
         :param subgroups: The subgroups with updated information
         """
         api_args = {'subgroup': subgroups}
-        uri = '/PermissionGroupSubgroupEntry/{}/'.format(self._group_name)
+        uri = f'/PermissionGroupSubgroupEntry/{self._group_name}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
         self._subgroup = subgroups
 
@@ -1194,8 +1185,7 @@ class PermissionsGroup(object):
             to be remoevd from this
             :class:`~dyn.tm.accounts.PermissionsGroup`'s subgroups
         """
-        uri = '/PermissionGroupSubgroupEntry/{}/{}/'.format(self._group_name,
-                                                            name)
+        uri = f'/PermissionGroupSubgroupEntry/{self._group_name}/{name}/'
         DynectSession.get_session().execute(uri, 'DELETE')
         self._subgroup.remove(name)
 
@@ -1218,10 +1208,10 @@ class UserZone(object):
         self._zone_name = zone_name
         self._recurse = recurse
         api_args = {'recurse': self._recurse}
-        uri = '/UserZoneEntry/{}/{}/'.format(self._user_name, self._zone_name)
+        uri = f'/UserZoneEntry/{self._user_name}/{self._zone_name}/'
         respnose = DynectSession.get_session().execute(uri, 'POST', api_args)
         for key, val in respnose['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def user_name(self):
@@ -1245,7 +1235,7 @@ class UserZone(object):
     def recurse(self, value):
         self._recurse = value
         api_args = {'recurse': self._recurse, 'zone_name': self._zone_name}
-        uri = '/UserZoneEntry/{}/'.format(self._user_name)
+        uri = f'/UserZoneEntry/{self._user_name}/'
         DynectSession.get_session().execute(uri, 'PUT', api_args)
 
     def update_zones(self, zone=None):
@@ -1261,17 +1251,17 @@ class UserZone(object):
         api_args = {'zone': []}
         for zone_data in zone:
             api_args['zone'].append({'zone_name': zone_data})
-        uri = '/UserZoneEntry/{}/'.format(self._user_name)
+        uri = f'/UserZoneEntry/{self._user_name}/'
         respnose = DynectSession.get_session().execute(uri, 'PUT', api_args)
         for key, val in respnose['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def delete(self):
         """Delete this :class:`~dyn.tm.accounts.UserZone` object from the
         DynECT System
         """
         api_args = {'recurse': self.recurse}
-        uri = '/UserZoneEntry/{}/{}/'.format(self._user_name, self._zone_name)
+        uri = f'/UserZoneEntry/{self._user_name}/{self._zone_name}/'
         DynectSession.get_session().execute(uri, 'DELETE', api_args)
 
     def __str__(self):
@@ -1305,8 +1295,8 @@ class Notifier(object):
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
-            self.uri = '/Notifier/{}/'.format(self._notifier_id)
+                setattr(self, f'_{key}', val)
+            self.uri = f'/Notifier/{self._notifier_id}/'
         elif len(args) + len(kwargs) > 1:
             self._post(*args, **kwargs)
         elif len(kwargs) > 0 or 'label' in kwargs:
@@ -1326,20 +1316,20 @@ class Notifier(object):
         self._services = services
         response = DynectSession.get_session().execute(uri, 'POST', self)
         self._build(response['data'])
-        self.uri = '/Notifier/{}/'.format(self._notifier_id)
+        self.uri = f'/Notifier/{self._notifier_id}/'
 
     def _get(self, notifier_id):
         """Get an existing :class:`~dyn.tm.accounts.Notifier` object from the
         DynECT System
         """
         self._notifier_id = notifier_id
-        self.uri = '/Notifier/{}/'.format(self._notifier_id)
+        self.uri = f'/Notifier/{self._notifier_id}/'
         response = DynectSession.get_session().execute(self.uri, 'GET')
         self._build(response['data'])
 
     def _build(self, data):
         for key, val in data.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _update(self, api_args=None):
         response = DynectSession.get_session().execute(self.uri, 'PUT',
@@ -1452,16 +1442,16 @@ class Contact(object):
         self._city = self._country = self._fax = self._notify_email = None
         self._pager_email = self._phone = self._post_code = self._state = None
         self._website = None
-        self.uri = '/Contact/{}/'.format(self._nickname)
+        self.uri = f'/Contact/{self._nickname}/'
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
                 if key != '_nickname':
-                    setattr(self, '_' + key, val)
+                    setattr(self, f'_{key}', val)
                 else:
                     setattr(self, key, val)
-            self.uri = '/Contact/{}/'.format(self._nickname)
-        elif len(args) == 0 and len(kwargs) == 0:
+            self.uri = f'/Contact/{self._nickname}/'
+        elif not args and not kwargs:
             self._get()
         else:
             self._post(*args, **kwargs)
@@ -1496,11 +1486,11 @@ class Contact(object):
         """
         response = DynectSession.get_session().execute(self.uri, 'GET')
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _build(self, data):
         for key, val in data.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _update(self, api_args=None):
         """Private update method which handles building this
@@ -1726,11 +1716,10 @@ class IPACL(object):
             'web' (default) or 'api'
         """
         super(IPACL, self).__init__()
-        valid_scope = ['api', 'web']
         self._scope = kwargs.get('scope', 'web').lower()
+        valid_scope = ['api', 'web']
         if self._scope not in valid_scope:
-            raise Exception('scope can only be: {}'.format(" ".join(
-                                                           valid_scope)))
+            raise Exception(f'scope can only be: {" ".join(valid_scope)}')
         if not isinstance(kwargs.get('netmasks', []), list):
             raise Exception('Must be list of netmasks.')
         self._netmasks = " ".join(kwargs.get('netmasks', []))
@@ -1738,10 +1727,10 @@ class IPACL(object):
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
-        elif len(args) == 0 and len(kwargs) == 0:
+                setattr(self, f'_{key}', val)
+        elif not args and not kwargs:
             self._get()
-        elif len(args) == 0 and len(kwargs) == 1 and kwargs['scope']:
+        elif not args and len(kwargs) == 1 and kwargs['scope']:
             self._get(scope=self._scope)
         else:
             kwargs['netmasks'] = self._netmasks
@@ -1750,7 +1739,7 @@ class IPACL(object):
     def _post(self, netmasks=None, active=None, scope=None):
         """Create a new :class:`~dyn.tm.accounts.IPACL` on the DynECT System
         """
-        self.uri = '/CustomerIPACL/{}/'.format(self.scope)
+        self.uri = f'/CustomerIPACL/{self.scope}/'
         api_args = {'netmasks': self._netmasks, 'active': self._active}
         response = DynectSession.get_session().execute(
                             self.uri, 'PUT', api_args)
@@ -1761,7 +1750,7 @@ class IPACL(object):
         System
         """
         self._scope = scope
-        self.uri = '/CustomerIPACL/{}/'.format(self._scope)
+        self.uri = f'/CustomerIPACL/{self._scope}/'
         response = DynectSession.get_session().execute(self.uri, 'GET')
         self._build(response['data'])
 
@@ -1769,13 +1758,13 @@ class IPACL(object):
         for scope in data:
             if scope['scope'] == self._scope:
                 for key, val in scope.items():
-                    setattr(self, '_' + key, val)
+                    setattr(self, f'_{key}', val)
 
     def _update(self, api_args=None):
         """Private update method which handles building this
         :class:`~dyn.tm.accounts.IPACL` object from the API JSON response
         """
-        self.uri = '/CustomerIPACL/{}/'.format(self._scope)
+        self.uri = f'/CustomerIPACL/{self._scope}/'
         response = DynectSession.get_session().execute(
                                 self.uri, 'PUT', api_args)
         self._build(response['data'])

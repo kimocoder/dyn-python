@@ -22,7 +22,7 @@ class DynectError(Exception):
         self.message = ''
         if isinstance(json_response_messages, list):
             for message in json_response_messages:
-                self.message += '{}. '.format(message['INFO'])
+                self.message += f"{message['INFO']}. "
             if self.message == '':
                 self.message = 'An unknown error occured.'
             else:
@@ -30,7 +30,7 @@ class DynectError(Exception):
         else:
             self.message = json_response_messages
         if api_type is not None:
-            self.message = '{}: {}'.format(api_type, self.message)
+            self.message = f'{api_type}: {self.message}'
 
     def __repr__(self):
         return self.message
@@ -61,9 +61,9 @@ class DynectInvalidArgumentError(DynectError):
         a list of valid arguments, if such a list exists
         """
         super(DynectInvalidArgumentError, self).__init__({})
-        self.message = 'Invalid argument ({}, {})'.format(arg, value)
+        self.message = f'Invalid argument ({arg}, {value})'
         if valid_args is not None:
-            self.message += ' :: valid values are: {}'.format(valid_args)
+            self.message += f' :: valid values are: {valid_args}'
 
     def __repr__(self):
         return self.message

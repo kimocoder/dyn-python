@@ -39,9 +39,9 @@ class DynInvalidArgumentError(EmailError):
         a list of valid arguments, if such a list exists
         """
         super(DynInvalidArgumentError, self).__init__({})
-        self.message = 'Invalid argument ({}, {})'.format(arg, value)
+        self.message = f'Invalid argument ({arg}, {value})'
         if valid_args is not None:
-            self.message += ' :: valid values are: {}'.format(valid_args)
+            self.message += f' :: valid values are: {valid_args}'
 
 
 class EmailInvalidArgumentError(EmailError):

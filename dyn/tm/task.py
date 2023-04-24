@@ -32,7 +32,7 @@ class Task(object):
             del kwargs['api']
             self._build(kwargs)
 
-        self.uri = '/Task/{}'.format(self._task_id)
+        self.uri = f'/Task/{self._task_id}'
 
     def _build(self, data):
         """Build this object from the data returned in an API response"""
@@ -41,7 +41,7 @@ class Task(object):
                 self._args = [{varg['name']: varg['value']}
                               for varg in val]
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     @property
     def args(self):
@@ -110,14 +110,14 @@ class Task(object):
 
     def refresh(self):
         """Updates :class:'Task' with current data on system. """
-        api_args = dict()
+        api_args = {}
         response = DynectSession.get_session().execute(self.uri, 'GET',
                                                        api_args)
         self._build(response['data'])
 
     def cancel(self):
         """Cancels Task"""
-        api_args = dict()
+        api_args = {}
         response = DynectSession.get_session().execute(self.uri, 'DELETE',
                                                        api_args)
 

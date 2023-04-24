@@ -41,19 +41,18 @@ def clean_args(dict_obj):
 class _Singleton(type):
     _instances = {}
 
-    def __call__(cls, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         cur_thread = threading.current_thread()
-        key = getattr(cls, '__metakey__')
-        if key not in cls._instances:
-            cls._instances[key] = {
-                # super(Singleton, cls) evaluates to type; *args/**kwargs get
-                # passed to class __init__ method via type.__call__
-                cur_thread: super(_Singleton, cls).__call__(*args, **kwargs)
+        key = getattr(self, '__metakey__')
+        if key not in self._instances:
+            self._instances[key] = {
+                cur_thread: super(_Singleton, self).__call__(*args, **kwargs)
             }
-        elif key in cls._instances and cur_thread not in cls._instances[key]:
-            cls._instances[key][cur_thread] = \
-                super(_Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[key][cur_thread]
+        elif cur_thread not in self._instances[key]:
+            self._instances[key][cur_thread] = super(_Singleton, self).__call__(
+                *args, **kwargs
+            )
+        return self._instances[key][cur_thread]
 
 
 # This class is a workaround for supporting metaclasses in both Python2 and 3
@@ -101,7 +100,7 @@ class SessionEngine(Singleton):
         """
         super(SessionEngine, self).__init__()
         self.__call_cache = _History() if history else None
-        self.extra_headers = dict()
+        self.extra_headers = {}
         self.logger = logging.getLogger(self.name)
         self.host = host
         self.port = port
@@ -128,8 +127,7 @@ class SessionEngine(Singleton):
         """
         cur_thread = threading.current_thread()
         key = getattr(cls, '__metakey__')
-        instance = cls._instances.get(key, {}).get(cur_thread, None)
-        if instance:
+        if instance := cls._instances.get(key, {}).get(cur_thread, None):
             instance.close_session()
         return cls.__call__(*args, **kwargs)
 
@@ -181,13 +179,12 @@ class SessionEngine(Singleton):
             msg = 'Proxy missing port, please specify a port'
             raise ValueError(msg)
 
-        if self.proxy_host and self.proxy_port:
+        if self.proxy_host:
             use_proxy = True
 
             if self.proxy_user and self.proxy_pass:
-                auth = '{}:{}'.format(self.proxy_user, self.proxy_pass)
-                headers['Proxy-Authorization'] = 'Basic ' + base64.b64encode(
-                    auth)
+                auth = f'{self.proxy_user}:{self.proxy_pass}'
+                headers['Proxy-Authorization'] = f'Basic {base64.b64encode(auth)}'
 
         if use_proxy:
             if self.ssl:
@@ -200,7 +197,6 @@ class SessionEngine(Singleton):
                 self.logger.info(msg)
                 self._conn = HTTPSConnection(self.proxy_host, self.proxy_port,
                                              timeout=300)
-                self._conn.set_tunnel(self.host, self.port, headers)
             else:
                 s = ('Establishing unencrypted connection to {}:{} with proxy '
                      '{}:{}')
@@ -212,21 +208,17 @@ class SessionEngine(Singleton):
                 self.logger.info(msg)
                 self._conn = HTTPConnection(self.proxy_host, self.proxy_port,
                                             timeout=300)
-                self._conn.set_tunnel(self.host, self.port, headers)
+            self._conn.set_tunnel(self.host, self.port, headers)
+        elif self.ssl:
+            msg = f'Establishing SSL connection to {self.host}:{self.port}'
+            self.logger.info(msg)
+            self._conn = HTTPSConnection(self.host, self.port,
+                                         timeout=300)
         else:
-            if self.ssl:
-                msg = 'Establishing SSL connection to {}:{}'.format(self.host,
-                                                                    self.port)
-                self.logger.info(msg)
-                self._conn = HTTPSConnection(self.host, self.port,
-                                             timeout=300)
-            else:
-                msg = 'Establishing unencrypted connection to {}:{}'.format(
-                    self.host,
-                    self.port)
-                self.logger.info(msg)
-                self._conn = HTTPConnection(self.host, self.port,
-                                            timeout=300)
+            msg = f'Establishing unencrypted connection to {self.host}:{self.port}'
+            self.logger.info(msg)
+            self._conn = HTTPConnection(self.host, self.port,
+                                        timeout=300)
 
     def _process_response(self, response, method, final=False):
         """API Method. Process an API response for failure, incomplete, or
@@ -248,8 +240,7 @@ class SessionEngine(Singleton):
     def _retry(self, msgs, final=False):
         """Retry logic around throttled or blocked tasks"""
 
-        throttle_err = 'RATE_LIMIT_EXCEEDED'
-        throttled = any(throttle_err == err['ERR_CD'] for err in msgs)
+        throttled = any(err['ERR_CD'] == 'RATE_LIMIT_EXCEEDED' for err in msgs)
 
         if throttled:
             # We're rate limited, so wait 5 seconds and try again
@@ -262,8 +253,11 @@ class SessionEngine(Singleton):
         if blocked:
             try:
                 # Get the task id
-                task = next(pat.match(i['INFO']).group(1) for i in msgs
-                            if pat.match(i.get('INFO', '')))
+                task = next(
+                    pat.match(i['INFO'])[1]
+                    for i in msgs
+                    if pat.match(i.get('INFO', ''))
+                )
             except:
                 # Task id could not be recovered
                 wait = 1
@@ -323,7 +317,7 @@ class SessionEngine(Singleton):
         prefixed by '/REST/'
         """
         if not uri.startswith('/'):
-            uri = '/' + uri
+            uri = f'/{uri}'
 
         if not uri.startswith(self.uri_root):
             uri = self.uri_root + uri
@@ -346,11 +340,17 @@ class SessionEngine(Singleton):
             # If an item in args.__dict__ has a _json attribute, use that in
             # place of the actual object
             d = args.__dict__
-            args = {(x if not x.startswith('_') else x[1:]):
-                    (d[x] if not hasattr(d[x], '_json') else getattr(d[x],
-                                                                     '_json'))
-                    for x in d if d[x] is not None and
-                    not hasattr(d[x], '__call__') and x.startswith('_')}
+            args = {
+                x[1:]
+                if x.startswith('_')
+                else x: getattr(d[x], '_json')
+                if hasattr(d[x], '_json')
+                else d[x]
+                for x in d
+                if d[x] is not None
+                and not hasattr(d[x], '__call__')
+                and x.startswith('_')
+            }
         return args, json.dumps(args), uri
 
     def execute(self, uri, method, args=None, final=False):
@@ -385,17 +385,14 @@ class SessionEngine(Singleton):
         try:
             response = self._conn.getresponse()
         except (IOError, HTTPException) as e:
-            if final:
-                raise e
-            else:
+            if not final:
                 # Handle processing a connection error
                 resp = self._handle_error(uri, method, raw_args)
                 # If we got a valid response back from our _handle_error call
                 # Then return it, otherwise raise the original exception
                 if resp is not None:
                     return resp
-                raise e
-
+            raise e
         return self._handle_response(response, uri, method, raw_args, final)
 
     def _meta_update(self, uri, method, results):
@@ -406,14 +403,20 @@ class SessionEngine(Singleton):
         :param results: the JSON results
         """
         # If we had a successful log in, update the token
-        if uri.startswith('/REST/Session') and method == 'POST':
-            if results['status'] == 'success':
-                self._token = results['data']['token']
+        if (
+            uri.startswith('/REST/Session')
+            and method == 'POST'
+            and results['status'] == 'success'
+        ):
+            self._token = results['data']['token']
 
         # Otherwise, if it's a successful logout, blank the token
-        if uri.startswith('/REST/Session') and method == 'DELETE':
-            if results['status'] == 'success':
-                self._token = None
+        if (
+            uri.startswith('/REST/Session')
+            and method == 'DELETE'
+            and results['status'] == 'success'
+        ):
+            self._token = None
 
     def poll_response(self, response, body):
         """Looks at a response from a REST command, and while indicates that
@@ -425,7 +428,7 @@ class SessionEngine(Singleton):
         while response.status == 307:
             time.sleep(1)
             uri = response.getheader('Location')
-            self.logger.info('Polling {}'.format(uri))
+            self.logger.info(f'Polling {uri}')
 
             self.send_command(uri, 'GET', '')
             response = self._conn.getresponse()
@@ -443,7 +446,7 @@ class SessionEngine(Singleton):
         self._conn.putrequest(method, uri)
 
         # Build headers
-        user_agent = 'dyn-py v{}'.format(__version__)
+        user_agent = f'dyn-py v{__version__}'
         headers = {'Content-Type': self.content_type, 'User-Agent': user_agent}
         for key, val in self.extra_headers.items():
             headers[key] = val
@@ -469,35 +472,35 @@ class SessionEngine(Singleton):
         :param timeout: how long (in seconds) we should wait for a valid
             response before giving up on this request
         """
-        self.logger.debug('Polling for job_id: {}'.format(job_id))
+        self.logger.debug(f'Polling for job_id: {job_id}')
         start = datetime.now()
-        uri = '/Job/{}/'.format(job_id)
+        uri = f'/Job/{job_id}/'
         api_args = {}
         # response = self.execute(uri, 'GET', api_args)
         response = {'status': 'incomplete'}
         now = datetime.now()
-        self.logger.warn('Waiting for job {}'.format(job_id))
+        self.logger.warn(f'Waiting for job {job_id}')
         too_long = (now - start).seconds < timeout
         while response['status'] is 'incomplete' and too_long:
             time.sleep(10)
             response = self.execute(uri, 'GET', api_args)
         return response
 
-    def __getstate__(cls):
+    def __getstate__(self):
         """Because HTTP/HTTPS connections are not serializeable, we need to
         strip the connection instance out before we ship the pickled data
         """
-        d = cls.__dict__.copy()
+        d = self.__dict__.copy()
         d.pop('_conn')
         return d
 
-    def __setstate__(cls, state):
+    def __setstate__(self, state):
         """Because the HTTP/HTTPS connection was stripped out in __getstate__ we
         must manually re-enter it as None and let the sessions execute method
         handle rebuilding it later
         """
-        cls.__dict__ = state
-        cls.__dict__['_conn'] = None
+        self.__dict__ = state
+        self.__dict__['_conn'] = None
 
     def __str__(self):
         """str override"""

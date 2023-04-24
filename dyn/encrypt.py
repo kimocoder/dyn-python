@@ -26,7 +26,7 @@ def generate_key(force=False):
         return generate_key.secret_key
 
     choices = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-    key = ''.join([random.SystemRandom().choice(choices) for i in range(50)])
+    key = ''.join([random.SystemRandom().choice(choices) for _ in range(50)])
     generate_key.secret_key = key
     return generate_key.secret_key
 
@@ -80,7 +80,7 @@ try:
 
         @staticmethod
         def _unpad(s):
-            return s[:-ord(s[len(s) - 1:])]
+            return s[:-ord(s[-1:])]
 
 except ImportError:
     # If we don't have PyCrypto installed, we won't encrypt passwords

@@ -31,7 +31,7 @@ class HTTPRedirect(object):
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
         elif len(args) + len(kwargs) == 1:
             self._get()
         else:
@@ -39,38 +39,38 @@ class HTTPRedirect(object):
 
     def _get(self):
         """Build an object around an existing DynECT HTTPRedirect Service"""
-        self.uri = '/HTTPRedirect/{}/{}/'.format(self._zone, self._fqdn)
+        self.uri = f'/HTTPRedirect/{self._zone}/{self._fqdn}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(self.uri, 'GET',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _post(self, code, keep_uri, url):
         """Create a new HTTPRedirect Service on the DynECT System"""
         self._code = code
         self._keep_uri = keep_uri
         self._url = url
-        self.uri = '/HTTPRedirect/{}/{}/'.format(self._zone, self._fqdn)
+        self.uri = f'/HTTPRedirect/{self._zone}/{self._fqdn}/'
         api_args = {'code': self._code, 'keep_uri': self._keep_uri,
                     'url': self._url}
         response = DynectSession.get_session().execute(self.uri, 'POST',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _update(self, **kwargs):
         """Update an existing HTTPRedirect Service on the DynECT System"""
         self._code = kwargs.get('code', self._code)
         self._keep_uri = kwargs.get('keep_uri', self.keep_uri)
         self._url = kwargs.get('url', self._url)
-        self.uri = '/HTTPRedirect/{}/{}/'.format(self._zone, self._fqdn)
+        self.uri = f'/HTTPRedirect/{self._zone}/{self._fqdn}/'
         api_args = {'code': self._code, 'keep_uri': self._keep_uri,
                     'url': self._url}
         response = DynectSession.get_session().execute(self.uri, 'PUT',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def zone(self):

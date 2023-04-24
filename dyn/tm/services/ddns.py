@@ -37,7 +37,7 @@ class DynamicDNS(object):
                 if key == 'active':
                     self._active = Active(val)
                 else:
-                    setattr(self, '_' + key, val)
+                    setattr(self, f'_{key}', val)
         elif len(args) + len(kwargs) == 1:
             self._get(*args, **kwargs)
         elif 'record_type' in kwargs and len(kwargs) == 1:
@@ -48,8 +48,7 @@ class DynamicDNS(object):
     def _get(self, record_type=None):
         """Build an object around an existing DynECT DynamicDNS Service"""
         self._record_type = record_type
-        self.uri = '/DDNS/{}/{}/{}/'.format(self._zone, self._fqdn,
-                                            self._record_type)
+        self.uri = f'/DDNS/{self._zone}/{self._fqdn}/{self._record_type}/'
         api_args = {}
         response = DynectSession.get_session().execute(self.uri, 'GET',
                                                        api_args)
@@ -57,7 +56,7 @@ class DynamicDNS(object):
             if key == 'active':
                 self._active = Active(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     def _post(self, record_type, address, user=None):
         """Create a new DynamicDNS Service on the DynECT System"""
@@ -65,8 +64,7 @@ class DynamicDNS(object):
         self._address = address
         if user:
             self._user = user
-        self.uri = '/DDNS/{}/{}/{}/'.format(self._zone, self._fqdn,
-                                            self._record_type)
+        self.uri = f'/DDNS/{self._zone}/{self._fqdn}/{self._record_type}/'
         api_args = {'address': self._address}
         if user:
             api_args['user'] = self._user
@@ -77,7 +75,7 @@ class DynamicDNS(object):
             if user:
                 if key == 'ddns':
                     for ddns_key, ddns_val in val.items():
-                        setattr(self, '_' + ddns_key, ddns_val)
+                        setattr(self, f'_{ddns_key}', ddns_val)
                 if key == 'new_user':
                     user_name = val['user_name']
                     del val['user_name']
@@ -85,7 +83,7 @@ class DynamicDNS(object):
             elif key == 'active':
                 self._active = Active(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     @property
     def zone(self):
@@ -162,7 +160,7 @@ class DynamicDNS(object):
         response = DynectSession.get_session().execute(self.uri, 'PUT',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def activate(self):
         """Activate this Dynamic DNS service"""
@@ -170,7 +168,7 @@ class DynamicDNS(object):
         response = DynectSession.get_session().execute(self.uri, 'PUT',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def deactivate(self):
         """Deactivate this Dynamic DNS service"""
@@ -178,7 +176,7 @@ class DynamicDNS(object):
         response = DynectSession.get_session().execute(self.uri, 'PUT',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def reset(self):
         """Resets the abuse count on this Dynamic DNS service"""
@@ -186,7 +184,7 @@ class DynamicDNS(object):
         response = DynectSession.get_session().execute(self.uri, 'PUT',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def delete(self):
         """Delete this Dynamic DNS service from the DynECT System"""

@@ -17,7 +17,7 @@ def get_all_advanced_redirect_rules(zone, fqdn):
     :param zone: zone for query
     :param fqdn: fqdn for query
     """
-    uri = '/AdvRedirectRule/{}/{}/'.format(zone, fqdn)
+    uri = f'/AdvRedirectRule/{zone}/{fqdn}/'
     response = DynectSession.get_session().execute(uri, 'GET',
                                                    {})
     return [AdvancedRedirectRule(zone, fqdn, api=True, **rule) for rule in
@@ -47,7 +47,7 @@ class AdvancedRedirect(object):
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
         elif len(args) + len(kwargs) == 0:
             self._get()
         else:
@@ -56,21 +56,21 @@ class AdvancedRedirect(object):
     def _get(self):
         """Build an object around an existing DynECT :class:`AdvancedRedirect`
          Service"""
-        self.uri = '/AdvRedirect/{}/{}/'.format(self._zone, self._fqdn)
+        self.uri = f'/AdvRedirect/{self._zone}/{self._fqdn}/'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(self.uri, 'GET',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _post(self):
         """Create a new :class:`AdvancedRedirect` Service on
          the DynECT System"""
-        self.uri = '/AdvRedirect/{}/{}/'.format(self._zone, self._fqdn)
+        self.uri = f'/AdvRedirect/{self._zone}/{self._fqdn}/'
 
         api_args = {'active': self._active}
         if self._rules:
-            api_args['rules'] = list()
+            api_args['rules'] = []
             for rule in self._rules:
                 if isinstance(rule, AdvancedRedirectRule):
                     api_args['rules'].append(rule._json)
@@ -83,7 +83,7 @@ class AdvancedRedirect(object):
     def _update(self, api_args=None):
         """Update an existing :class:`AdvancedRedirect` Service
          on the DynECT System"""
-        self.uri = '/AdvRedirect/{}/{}/'.format(self._zone, self._fqdn)
+        self.uri = f'/AdvRedirect/{self._zone}/{self._fqdn}/'
         response = DynectSession.get_session().execute(self.uri, 'PUT',
                                                        api_args)
         self._build(response['data'])
@@ -98,7 +98,7 @@ class AdvancedRedirect(object):
                                                             self._fqdn,
                                                             **rule))
                 continue
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def zone(self):
@@ -147,8 +147,7 @@ class AdvancedRedirect(object):
 
     @rules.setter
     def rules(self, value):
-        api_args = dict()
-        api_args['rules'] = list()
+        api_args = {'rules': []}
         for rule in value:
             if isinstance(rule, AdvancedRedirectRule):
                 api_args['rules'].append(rule._json)
@@ -159,7 +158,7 @@ class AdvancedRedirect(object):
     def delete(self):
         """Delete this :class:`AdvancedRedirect` service from the DynECT
         System """
-        self.uri = '/AdvRedirect/{}/{}'.format(self._zone, self._fqdn)
+        self.uri = f'/AdvRedirect/{self._zone}/{self._fqdn}'
         DynectSession.get_session().execute(self.uri, 'DELETE', {})
 
     def __str__(self):
@@ -193,7 +192,7 @@ class AdvancedRedirectRule(object):
         """
         self._zone = None
         self._fqdn = None
-        if len(args) >= 1:
+        if args:
             self._zone = args[0]
         if len(args) >= 2:
             self._fqdn = args[1]
@@ -208,10 +207,10 @@ class AdvancedRedirectRule(object):
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
-        elif len(args) == 0 and len(kwargs) > 0:
+                setattr(self, f'_{key}', val)
+        elif not args and len(kwargs) > 0:
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
         elif len(args) == 2 and self._public_id:
             self._get()
         else:
@@ -220,21 +219,18 @@ class AdvancedRedirectRule(object):
     def _get(self):
         """Build an object around an existing DynECT
         :class:`AdvancedRedirectRule` Service"""
-        self.uri = '/AdvRedirectRule/{}/{}/{}'.format(self._zone,
-                                                      self._fqdn,
-                                                      self._public_id)
+        self.uri = f'/AdvRedirectRule/{self._zone}/{self._fqdn}/{self._public_id}'
         api_args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(self.uri, 'GET',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     def _post(self):
         """Create a new :class:`AdvancedRedirectRule` Service
          on the DynECT System"""
-        api_args = dict()
-        self.uri = '/AdvRedirectRule/{}/{}/'.format(self._zone,
-                                                    self._fqdn)
+        api_args = {}
+        self.uri = f'/AdvRedirectRule/{self._zone}/{self._fqdn}/'
         if self._code:
             api_args['code'] = self._code
         if self._host_prefix:
@@ -256,16 +252,14 @@ class AdvancedRedirectRule(object):
     def _update(self, api_args=None):
         """Update an existing :class:`AdvancedRedirectRule` Service
         on the DynECT System"""
-        self.uri = '/AdvRedirectRule/{}/{}/{}'.format(self._zone,
-                                                      self._fqdn,
-                                                      self._public_id)
+        self.uri = f'/AdvRedirectRule/{self._zone}/{self._fqdn}/{self._public_id}'
         response = DynectSession.get_session().execute(self.uri, 'PUT',
                                                        api_args)
         self._build(response['data'])
 
     def _build(self, data):
         for key, val in data.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def _json(self):
@@ -416,9 +410,7 @@ class AdvancedRedirectRule(object):
         """Delete this :class:`AdvancedRedirectRule` service
          from the DynECT System
         """
-        self.uri = '/AdvRedirectRule/{}/{}/{}'.format(self._zone,
-                                                      self._fqdn,
-                                                      self._public_id)
+        self.uri = f'/AdvRedirectRule/{self._zone}/{self._fqdn}/{self._public_id}'
         DynectSession.get_session().execute(self.uri, 'DELETE', {})
 
     def __str__(self):

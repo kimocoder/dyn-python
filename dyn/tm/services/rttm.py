@@ -70,22 +70,18 @@ class Monitor(object):
         :param other: the value to compare this :class:`HealthMonitor` to.
             Valid input types: `dict`, :class:`HealthMonitor`
         """
-        if isinstance(other, dict):
-            return False
-        elif isinstance(other, Monitor):
-            return False
         return False
 
     def _get(self):
         """Update this :class:`Monitor` with data from the Dyn System"""
-        uri = '/RTTM/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/RTTM/{self.zone}/{self.fqdn}/'
         api_args = {}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         self._build(response['data']['monitor'])
 
     def _update(self, api_args):
         """Update the Dyn System with data from this :class:`Monitor`"""
-        uri = '/RTTM/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/RTTM/{self.zone}/{self.fqdn}/'
         response = DynectSession.get_session().execute(uri, 'PUT', api_args)
         self._build(response['data']['monitor'])
 
@@ -96,7 +92,7 @@ class Monitor(object):
         :param data: The 'data' field of API responses
         """
         for key, val in data.items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def status(self):
@@ -240,7 +236,7 @@ class PerformanceMonitor(Monitor):
         """Update this :class:`PerformanceMonitor` with data from the Dyn
         System
         """
-        uri = '/RTTM/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/RTTM/{self.zone}/{self.fqdn}/'
         api_args = {}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         self._build(response['data']['performance_monitor'])
@@ -249,7 +245,7 @@ class PerformanceMonitor(Monitor):
         """Update the Dyn System with data from this
         :class:`PerformanceMonitor`
         """
-        uri = '/RTTM/{}/{}/'.format(self.zone, self.fqdn)
+        uri = f'/RTTM/{self.zone}/{self.fqdn}/'
         response = DynectSession.get_session().execute(uri, 'PUT', api_args)
         self._build(response['data']['performance_monitor'])
 
@@ -300,18 +296,12 @@ class RegionPoolEntry(object):
 
     def _update(self, args):
         """Private method for processing various updates"""
-        uri = '/RTTMRegionPoolEntry/{}/{}/{}/{}/'.format(self._zone,
-                                                         self._fqdn,
-                                                         self._region_code,
-                                                         self._address)
+        uri = f'/RTTMRegionPoolEntry/{self._zone}/{self._fqdn}/{self._region_code}/{self._address}/'
         response = DynectSession.get_session().execute(uri, 'PUT', args)
         self._build(response['data'])
 
     def _get(self):
-        uri = '/RTTMRegionPoolEntry/{}/{}/{}/{}/'.format(self._zone,
-                                                         self._fqdn,
-                                                         self._region_code,
-                                                         self._address)
+        uri = f'/RTTMRegionPoolEntry/{self._zone}/{self._fqdn}/{self._region_code}/{self._address}/'
         args = {'detail': 'Y'}
         response = DynectSession.get_session().execute(uri, 'GET', args)
         self._build(response['data'])
@@ -325,7 +315,7 @@ class RegionPoolEntry(object):
             elif key == "task_id":
                 self._task_id = Task(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     @property
     def task(self):
@@ -426,16 +416,16 @@ class RegionPoolEntry(object):
 
     def to_json(self):
         """Return a JSON representation of this RegionPoolEntry"""
-        json_blob = {'address': self._address, 'label': self._label,
-                     'weight': self._weight, 'serve_mode': self._serve_mode}
-        return json_blob
+        return {
+            'address': self._address,
+            'label': self._label,
+            'weight': self._weight,
+            'serve_mode': self._serve_mode,
+        }
 
     def delete(self):
         """Delete this :class:`RegionPoolEntry`"""
-        uri = '/RTTMRegionPoolEntry/{}/{}/{}/{}/'.format(self._zone,
-                                                         self._fqdn,
-                                                         self._region_code,
-                                                         self._address)
+        uri = f'/RTTMRegionPoolEntry/{self._zone}/{self._fqdn}/{self._region_code}/{self._address}/'
         DynectSession.get_session().execute(uri, 'DELETE', {})
 
     def __str__(self):
@@ -485,17 +475,13 @@ class RTTMRegion(object):
         self._autopopulate = self._ep = self._apmc = None
         self._epmc = self._serve_count = self._failover_mode = None
         self._failover_data = None
-        if len(args) != 0:
-            pool = args[0]
-        else:
-            pool = None
+        pool = args[0] if args else None
         if region_code not in self.valid_region_codes:
             raise DynectInvalidArgumentError('region_code', region_code,
                                              self.valid_region_codes)
         self._region_code = region_code
         self._pool = []
-        self.uri = '/RTTMRegion/{}/{}/{}/'.format(self._zone, self._fqdn,
-                                                  self._region_code)
+        self.uri = f'/RTTMRegion/{self._zone}/{self._fqdn}/{self._region_code}/'
         # Backwards Compatability, since we changed the structure of this
         # Class:
         if kwargs.get('pool'):
@@ -504,9 +490,9 @@ class RTTMRegion(object):
                           DeprecationWarning)
             pool = kwargs.pop('pool')
 
-        if not pool and len(kwargs) == 0:
+        if not pool and not kwargs:
             self._get()
-        if len(kwargs) > 0:
+        if kwargs:
             self._build(kwargs)
         if pool:
             for poole in pool:
@@ -528,7 +514,7 @@ class RTTMRegion(object):
 
     def _post(self):
         """Create a new :class:`RTTMRegion` on the DynECT System"""
-        uri = '/RTTMRegion/{}/{}/'.format(self._zone, self._fqdn)
+        uri = f'/RTTMRegion/{self._zone}/{self._fqdn}/'
         api_args = {'region_code': self._region_code,
                     'pool': [poole.to_json() for poole in self._pool]}
         if self._autopopulate:
@@ -582,7 +568,7 @@ class RTTMRegion(object):
             elif key == "task_id":
                 self._task_id = Task(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     @property
     def task(self):
@@ -806,7 +792,7 @@ class RTTM(object):
                                         'local5', 'local6', 'local7')
         self._zone = zone
         self._fqdn = fqdn
-        self.uri = '/RTTM/{}/{}/'.format(self._zone, self._fqdn)
+        self.uri = f'/RTTM/{self._zone}/{self._fqdn}/'
         self._auto_recover = self._ttl = self._notify_events = None
         self._syslog_server = self._syslog_port = self._syslog_ident = None
         self._syslog_facility = self._monitor = None
@@ -819,7 +805,7 @@ class RTTM(object):
         if 'api' in kwargs:
             del kwargs['api']
             self._build(kwargs)
-        elif len(args) == 0 and len(kwargs) == 0:
+        elif not args and not kwargs:
             self._get()
         else:
             self._post(*args, **kwargs)
@@ -958,7 +944,7 @@ class RTTM(object):
             elif key == "task_id":
                 self._task_id = Task(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
         self._region.uri = self.uri
 
     @property

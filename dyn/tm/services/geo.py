@@ -493,23 +493,25 @@ class GeoRegionGroup(object):
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     def _post(self, countries, name, geo_records):
         self._countries = countries
         self._name = name
         self.geo_records = geo_records
-        api_args = {'service_name': self._service_name,
-                    'group_name': self._group_name,
-                    'countries': self._countries, 'name': self._name}
-        return api_args
+        return {
+            'service_name': self._service_name,
+            'group_name': self._group_name,
+            'countries': self._countries,
+            'name': self._name,
+        }
 
     def _get(self):
         api_args = {}
         response = DynectSession.get_session().execute(self.uri, 'GET',
                                                        api_args)
         for key, val in response['data'].items():
-            setattr(self, '_' + key, val)
+            setattr(self, f'_{key}', val)
 
     @property
     def countries(self):
@@ -532,13 +534,13 @@ class Geo(object):
         """
         super(Geo, self).__init__()
         self._service_name = service_name
-        self.uri = '/Geo/{}/'.format(self._service_name)
+        self.uri = f'/Geo/{self._service_name}/'
         self._groups = self._nodes = self._ttl = None
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
-        elif len(args) == 0 and len(kwargs) == 0:
+                setattr(self, f'_{key}', val)
+        elif not args and not kwargs:
             self._get()
         else:
             self._post(*args, **kwargs)
@@ -549,6 +551,8 @@ class Geo(object):
         self._ttl = ttl
         api_args = {'groups': []}
         nodes = []
+        # Build label hash
+        autolabel = ''
         for group in groups:
             weight = {}
             serve_count = {}
@@ -556,25 +560,22 @@ class Geo(object):
             label = {}
             rdata = {}
             for record in group.geo_records:
-                weight_name = ''.join([record.rec_name, '_weight'])
-                serve_name = ''.join([record.rec_name, '_serve_count'])
                 ttl_name = ''.join([record.rec_name, '_ttl'])
                 label_name = ''.join([record.rec_name, '_label'])
                 rdata_name = ''.join([record.rec_name, '_rdata'])
-                # Build weight hash
                 if hasattr(record, 'weight'):
+                    weight_name = ''.join([record.rec_name, '_weight'])
                     if weight_name in weight:
                         weight[weight_name].append(record.weight)
                     else:
                         weight[weight_name] = [record.weight]
                 # Build serve_count hash
                 if hasattr(record, 'serve_count'):
+                    serve_name = ''.join([record.rec_name, '_serve_count'])
                     serve_count[serve_name] = str(record.serve_count)
                 # Build ttl hash
                 if ttl_name in serve_count:
                     ttls[ttl_name] = str(record.ttl) or str(self._ttl)
-                # Build label hash
-                autolabel = ''
                 if label_name in label:
                     label[label_name].append(record.label or autolabel)
                 else:
@@ -595,12 +596,8 @@ class Geo(object):
         response = DynectSession.get_session().execute(self.uri, 'POST',
                                                        api_args)
         for key, val in response['data'].items():
-            if key == 'groups':
-                pass
-            elif key == 'nodes':
-                pass
-            else:
-                setattr(self, '_' + key, val)
+            if key not in ['groups', 'nodes']:
+                setattr(self, f'_{key}', val)
 
     def _get(self):
         """Get an existing :class:`Geo` service from the DynECT System"""
@@ -608,24 +605,16 @@ class Geo(object):
         response = DynectSession.get_session().execute(self.uri, 'GET',
                                                        api_args)
         for key, val in response['data'].items():
-            if key == 'groups':
-                pass
-            elif key == 'nodes':
-                pass
-            else:
-                setattr(self, '_' + key, val)
+            if key not in ['groups', 'nodes']:
+                setattr(self, f'_{key}', val)
 
     def _update(self, api_args):
         """Private Update method"""
         response = DynectSession.get_session().execute(self.uri, 'PUT',
                                                        api_args)
         for key, val in response['data'].items():
-            if key == 'groups':
-                pass
-            elif key == 'nodes':
-                pass
-            else:
-                setattr(self, '_' + key, val)
+            if key not in ['groups', 'nodes']:
+                setattr(self, f'_{key}', val)
 
     @property
     def service_name(self):
@@ -636,7 +625,7 @@ class Geo(object):
         self._service_name = new_name
         api_args = {'new_name': self._service_name}
         self._update(api_args)
-        self.uri = '/Geo/{}/'.format(self._service_name)
+        self.uri = f'/Geo/{self._service_name}/'
 
     @property
     def groups(self):

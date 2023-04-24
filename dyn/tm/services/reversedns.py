@@ -33,7 +33,7 @@ class ReverseDNS(object):
         if 'api' in kwargs:
             del kwargs['api']
             for key, val in kwargs.items():
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
         elif len(args) + len(kwargs) == 1:
             self._get(*args, **kwargs)
         else:
@@ -47,30 +47,29 @@ class ReverseDNS(object):
         self._record_types = []
         if record_types is None:
             record_types = ['A']
-        for record_type in record_types:
-            if record_type in self.valid_record_types:
-                self._record_types.append(record_type)
+        self._record_types.extend(
+            record_type
+            for record_type in record_types
+            if record_type in self.valid_record_types
+        )
         api_args = {'record_types': self._record_types,
                     'hosts': self._hosts,
                     'netmask': self._netmask}
         if ttl is not None:
             api_args['ttl'] = self._ttl
-        uri = '/IPTrack/{}/{}/'.format(self._zone, self._fqdn)
+        uri = f'/IPTrack/{self._zone}/{self._fqdn}/'
         response = DynectSession.get_session().execute(uri, 'POST', api_args)
         self._build(response['data'])
-        self.uri = '/IPTrack/{}/{}/{}/'.format(self._zone, self._fqdn,
-                                               self._iptrack_id)
+        self.uri = f'/IPTrack/{self._zone}/{self._fqdn}/{self._iptrack_id}/'
 
     def _get(self, service_id):
         """Build an object around an existing DynECT ReverseDNS Service"""
         self._iptrack_id = service_id
-        uri = '/IPTrack/{}/{}/{}/'.format(self._zone, self._fqdn,
-                                          self._iptrack_id)
+        uri = f'/IPTrack/{self._zone}/{self._fqdn}/{self._iptrack_id}/'
         api_args = {}
         response = DynectSession.get_session().execute(uri, 'GET', api_args)
         self._build(response['data'])
-        self.uri = '/IPTrack/{}/{}/{}/'.format(self._zone, self._fqdn,
-                                               self._iptrack_id)
+        self.uri = f'/IPTrack/{self._zone}/{self._fqdn}/{self._iptrack_id}/'
 
     def _update(self, api_args):
         """Update this object by making a PUT API call with the provided
@@ -86,7 +85,7 @@ class ReverseDNS(object):
             if key == 'active':
                 self._active = Active(val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     @property
     def zone(self):

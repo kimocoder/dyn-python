@@ -45,8 +45,7 @@ class DNSRecord(object):
                 self._fqdn += '.'
             if not self._record_type.endswith('Record'):
                 self._record_type += 'Record'
-            uri = '/{}/{}/{}/'.format(self._record_type, self._zone,
-                                      self._fqdn)
+            uri = f'/{self._record_type}/{self._zone}/{self._fqdn}/'
             response = DynectSession.get_session().execute(uri, 'POST',
                                                            api_args)
             self._build(response['data'])
@@ -62,8 +61,7 @@ class DNSRecord(object):
             if not self._record_type.endswith('Record'):
                 self._record_type += 'Record'
             self._record_id = record_id
-            uri = '/{}/{}/{}/{}/'.format(self._record_type, self._zone,
-                                         self._fqdn, self._record_id)
+            uri = f'/{self._record_type}/{self._zone}/{self._fqdn}/{self._record_id}/'
             response = DynectSession.get_session().execute(uri, 'GET', {})
             self._build(response['data'])
 
@@ -76,8 +74,7 @@ class DNSRecord(object):
             self._fqdn += '.'
         if not self._record_type.endswith('Record'):
             self._record_type += 'Record'
-        uri = '/{}/{}/{}/{}/'.format(self._record_type, self._zone, self._fqdn,
-                                     self._record_id)
+        uri = f'/{self._record_type}/{self._zone}/{self._fqdn}/{self._record_id}/'
         response = DynectSession.get_session().execute(uri, 'PUT', api_args)
         self._build(response['data'])
 
@@ -89,9 +86,9 @@ class DNSRecord(object):
         for key, val in data.items():
             if key == 'rdata':
                 for r_key, r_val in val.items():
-                    setattr(self, '_' + r_key, r_val)
+                    setattr(self, f'_{r_key}', r_val)
             else:
-                setattr(self, '_' + key, val)
+                setattr(self, f'_{key}', val)
 
     def rdata(self):
         """Return a records rdata"""
@@ -102,7 +99,7 @@ class DNSRecord(object):
                     key != '_record_type' and
                     key != '_record_id' and key != '_implicitPublish'):
                 missing = {'ttl', 'zone', 'fqdn'}
-                if all([i not in key for i in missing]):
+                if all(i not in key for i in missing):
                     rdata[key[1:]] = val
         return rdata
 
@@ -223,8 +220,7 @@ class ARecord(DNSRecord):
         """Return this :class:`~dyn.tm.records.ARecord`'s rdata as a JSON blob
         """
         guts = super(ARecord, self).rdata()
-        shell = {'a_rdata': guts}
-        return shell
+        return {'a_rdata': guts}
 
     @property
     def address(self):
@@ -244,11 +240,11 @@ class ARecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<ARecord>: {}'.format(self._address)
+        return f'<ARecord>: {self._address}'
 
     def __repr__(self):
         """print override"""
-        return '<ARecord>: {}'.format(self._address)
+        return f'<ARecord>: {self._address}'
 
 
 class AAAARecord(DNSRecord):
@@ -293,8 +289,7 @@ class AAAARecord(DNSRecord):
         blob
         """
         guts = super(AAAARecord, self).rdata()
-        shell = {'aaaa_rdata': guts}
-        return shell
+        return {'aaaa_rdata': guts}
 
     @property
     def address(self):
@@ -312,11 +307,11 @@ class AAAARecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<AAAARecord>: {}'.format(self._address)
+        return f'<AAAARecord>: {self._address}'
 
     def __repr__(self):
         """print override"""
-        return '<AAAARecord>: {}'.format(self._address)
+        return f'<AAAARecord>: {self._address}'
 
 
 class ALIASRecord(DNSRecord):
@@ -361,8 +356,7 @@ class ALIASRecord(DNSRecord):
         blob
         """
         guts = super(ALIASRecord, self).rdata()
-        shell = {'alias_rdata': guts}
-        return shell
+        return {'alias_rdata': guts}
 
     @property
     def alias(self):
@@ -387,7 +381,7 @@ class ALIASRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<ALIASRecord>: {}'.format(self._alias)
+        return f'<ALIASRecord>: {self._alias}'
 
     def __repr__(self):
         """print override"""
@@ -458,8 +452,7 @@ class CDNSKEYRecord(DNSRecord):
         blob
         """
         guts = super(CDNSKEYRecord, self).rdata()
-        shell = {'cdnskey_rdata': guts}
-        return shell
+        return {'cdnskey_rdata': guts}
 
     @property
     def algorithm(self):
@@ -515,7 +508,7 @@ class CDNSKEYRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<CDNSKEYRecord>: {}'.format(self._public_key)
+        return f'<CDNSKEYRecord>: {self._public_key}'
 
     def __repr__(self):
         """print override"""
@@ -586,8 +579,7 @@ class CDSRecord(DNSRecord):
         """Return this :class:`~dyn.tm.records.DSRecord`'s rdata as a JSON blob
         """
         guts = super(CDSRecord, self).rdata()
-        shell = {'cds_rdata': guts}
-        return shell
+        return {'cds_rdata': guts}
 
     @property
     def algorithm(self):
@@ -645,7 +637,7 @@ class CDSRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<CDSRecord>: {}'.format(self._digest)
+        return f'<CDSRecord>: {self._digest}'
 
     def __repr__(self):
         """print override"""
@@ -707,8 +699,7 @@ class CERTRecord(DNSRecord):
         blob
         """
         guts = super(CERTRecord, self).rdata()
-        shell = {'cert_rdata': guts}
-        return shell
+        return {'cert_rdata': guts}
 
     @property
     def format(self):
@@ -764,7 +755,7 @@ class CERTRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<CERTRecord>: {}'.format(self._certificate)
+        return f'<CERTRecord>: {self._certificate}'
 
     def __repr__(self):
         """print override"""
@@ -813,8 +804,7 @@ class CNAMERecord(DNSRecord):
         blob
         """
         guts = super(CNAMERecord, self).rdata()
-        shell = {'cname_rdata': guts}
-        return shell
+        return {'cname_rdata': guts}
 
     @property
     def cname(self):
@@ -839,7 +829,7 @@ class CNAMERecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<CNAMERecord>: {}'.format(self._cname)
+        return f'<CNAMERecord>: {self._cname}'
 
     def __repr__(self):
         """print override"""
@@ -913,8 +903,7 @@ class CSYNCRecord(DNSRecord):
         """Return this :class:`~dyn.tm.records.DSRecord`'s rdata as a JSON blob
         """
         guts = super(CSYNCRecord, self).rdata()
-        shell = {'csync_rdata': guts}
-        return shell
+        return {'csync_rdata': guts}
 
     def _format(self):
         """cleans up Flags and record types"""
@@ -1015,8 +1004,7 @@ class DHCIDRecord(DNSRecord):
         blob
         """
         guts = super(DHCIDRecord, self).rdata()
-        shell = {'dhcid_rdata': guts}
-        return shell
+        return {'dhcid_rdata': guts}
 
     @property
     def digest(self):
@@ -1033,7 +1021,7 @@ class DHCIDRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<DHCIDRecord>: {}'.format(self._digest)
+        return f'<DHCIDRecord>: {self._digest}'
 
     def __repr__(self):
         """print override"""
@@ -1087,8 +1075,7 @@ class DNAMERecord(DNSRecord):
         blob
         """
         guts = super(DNAMERecord, self).rdata()
-        shell = {'dname_rdata': guts}
-        return shell
+        return {'dname_rdata': guts}
 
     @property
     def dname(self):
@@ -1105,7 +1092,7 @@ class DNAMERecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<DNAMERecord>: {}'.format(self._dname)
+        return f'<DNAMERecord>: {self._dname}'
 
     def __repr__(self):
         """print override"""
@@ -1176,8 +1163,7 @@ class DNSKEYRecord(DNSRecord):
         blob
         """
         guts = super(DNSKEYRecord, self).rdata()
-        shell = {'dnskey_rdata': guts}
-        return shell
+        return {'dnskey_rdata': guts}
 
     @property
     def algorithm(self):
@@ -1233,7 +1219,7 @@ class DNSKEYRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<DNSKEYRecord>: {}'.format(self._public_key)
+        return f'<DNSKEYRecord>: {self._public_key}'
 
     def __repr__(self):
         """print override"""
@@ -1281,8 +1267,6 @@ class CAARecord(DNSRecord):
                 property.  This will be an issuer domain name or a URL.
             :param ttl: TTL for this record. Use 0 for zone default
         """
-        fields = ['flags', 'tag', 'value', 'ttl']
-
         create = kwargs.pop('create', None)
         if create is not None:
             super(CAARecord, self).__init__(zone, fqdn, create)
@@ -1292,6 +1276,8 @@ class CAARecord(DNSRecord):
             super(CAARecord, self).__init__(zone, fqdn)
             self._record_type = 'CAARecord'
             arg_length = len(args) + len(kwargs)
+            fields = ['flags', 'tag', 'value', 'ttl']
+
             if 'record_id' in kwargs:
                 self._get_record(kwargs['record_id'])
             elif arg_length == 1:
@@ -1397,7 +1383,7 @@ class DSRecord(DNSRecord):
         """
         self._digest = digest
         self._keytag = keytag
-        valid = [x for x in range(1, 6)]
+        valid = list(range(1, 6))
         if algorithm not in valid:
             raise DynectInvalidArgumentError('algorthim', algorithm, valid)
         self._algorithm = algorithm
@@ -1414,8 +1400,7 @@ class DSRecord(DNSRecord):
         """Return this :class:`~dyn.tm.records.DSRecord`'s rdata as a JSON blob
         """
         guts = super(DSRecord, self).rdata()
-        shell = {'ds_rdata': guts}
-        return shell
+        return {'ds_rdata': guts}
 
     @property
     def algorithm(self):
@@ -1473,7 +1458,7 @@ class DSRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<DSRecord>: {}'.format(self._digest)
+        return f'<DSRecord>: {self._digest}'
 
     def __repr__(self):
         """print override"""
@@ -1546,8 +1531,7 @@ class KEYRecord(DNSRecord):
         blob
         """
         guts = super(KEYRecord, self).rdata()
-        shell = {'key_rdata': guts}
-        return shell
+        return {'key_rdata': guts}
 
     @property
     def algorithm(self):
@@ -1603,7 +1587,7 @@ class KEYRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<KEYRecord>: {}'.format(self._public_key)
+        return f'<KEYRecord>: {self._public_key}'
 
     def __repr__(self):
         """print override"""
@@ -1663,8 +1647,7 @@ class KXRecord(DNSRecord):
         """Return this :class:`~dyn.tm.records.KXRecord`'s rdata as a JSON blob
         """
         guts = super(KXRecord, self).rdata()
-        shell = {'kx_rdata': guts}
-        return shell
+        return {'kx_rdata': guts}
 
     @property
     def exchange(self):
@@ -1698,7 +1681,7 @@ class KXRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<KXRecord>: {}'.format(self._exchange)
+        return f'<KXRecord>: {self._exchange}'
 
     def __repr__(self):
         """print override"""
@@ -1774,8 +1757,7 @@ class LOCRecord(DNSRecord):
         blob
         """
         guts = super(LOCRecord, self).rdata()
-        shell = {'loc_rdata': guts}
-        return shell
+        return {'loc_rdata': guts}
 
     @property
     def altitude(self):
@@ -1870,7 +1852,7 @@ class LOCRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<LOCRecord>: {} {}'.format(self._latitude, self._longitude)
+        return f'<LOCRecord>: {self._latitude} {self._longitude}'
 
     def __repr__(self):
         """print override"""
@@ -1905,16 +1887,16 @@ class IPSECKEYRecord(DNSRecord):
             self._record_type = 'IPSECKEYRecord'
         else:
             super(IPSECKEYRecord, self).__init__(zone, fqdn)
-            self.valid_gatetypes = range(0, 4)
-            self.valid_algorithms = range(0, 3)
+            self.valid_gatetypes = range(4)
+            self.valid_algorithms = range(3)
             self._record_type = 'IPSECKEYRecord'
             self._precedence = self._gatetype = self._algorithm = None
             self._gateway = self._public_key = None
             if 'record_id' in kwargs:
                 self._get_record(kwargs['record_id'])
             elif 'precedence' in kwargs or 'gatetype' in \
-                    kwargs or 'algorithm' in kwargs or 'gateway' in \
-                    kwargs or 'public_key' in kwargs or 'ttl' in kwargs:
+                        kwargs or 'algorithm' in kwargs or 'gateway' in \
+                        kwargs or 'public_key' in kwargs or 'ttl' in kwargs:
                 self._post(*args, **kwargs)
             elif len(args) + len(kwargs) > 1:
                 self._post(*args, **kwargs)
@@ -1949,8 +1931,7 @@ class IPSECKEYRecord(DNSRecord):
         JSON blob
         """
         guts = super(IPSECKEYRecord, self).rdata()
-        shell = {'ipseckey_rdata': guts}
-        return shell
+        return {'ipseckey_rdata': guts}
 
     @property
     def precedence(self):
@@ -2021,7 +2002,7 @@ class IPSECKEYRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<IPSECKEYRecord>: {}'.format(self._public_key)
+        return f'<IPSECKEYRecord>: {self._public_key}'
 
     def __repr__(self):
         """print override"""
@@ -2077,8 +2058,7 @@ class MXRecord(DNSRecord):
         """Return this :class:`~dyn.tm.records.MXRecord`'s rdata as a JSON blob
         """
         guts = super(MXRecord, self).rdata()
-        shell = {'mx_rdata': guts}
-        return shell
+        return {'mx_rdata': guts}
 
     @property
     def exchange(self):
@@ -2112,7 +2092,7 @@ class MXRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<MXRecord>: {}'.format(self._exchange)
+        return f'<MXRecord>: {self._exchange}'
 
     def __repr__(self):
         """print override"""
@@ -2191,8 +2171,7 @@ class NAPTRRecord(DNSRecord):
         blob
         """
         guts = super(NAPTRRecord, self).rdata()
-        shell = {'naptr_rdata': guts}
-        return shell
+        return {'naptr_rdata': guts}
 
     @property
     def order(self):
@@ -2285,7 +2264,7 @@ class NAPTRRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<NAPTRRecord>: {}'.format(self.replacement)
+        return f'<NAPTRRecord>: {self.replacement}'
 
     def __repr__(self):
         """print override"""
@@ -2335,8 +2314,7 @@ class PTRRecord(DNSRecord):
         blob
         """
         guts = super(PTRRecord, self).rdata()
-        shell = {'ptr_rdata': guts}
-        return shell
+        return {'ptr_rdata': guts}
 
     @property
     def ptrdname(self):
@@ -2353,7 +2331,7 @@ class PTRRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<PTRRecord>: {}'.format(self._ptrdname)
+        return f'<PTRRecord>: {self._ptrdname}'
 
     def __repr__(self):
         """print override"""
@@ -2412,8 +2390,7 @@ class PXRecord(DNSRecord):
         blob
         """
         guts = super(PXRecord, self).rdata()
-        shell = {'pxr_rdata': guts}
-        return shell
+        return {'pxr_rdata': guts}
 
     @property
     def preference(self):
@@ -2458,7 +2435,7 @@ class PXRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<PXRecord>: {} {}'.format(self._map822, self._mapx400)
+        return f'<PXRecord>: {self._map822} {self._mapx400}'
 
     def __repr__(self):
         """print override"""
@@ -2510,8 +2487,7 @@ class NSAPRecord(DNSRecord):
         blob
         """
         guts = super(NSAPRecord, self).rdata()
-        shell = {'nsap_rdata': guts}
-        return shell
+        return {'nsap_rdata': guts}
 
     @property
     def nsap(self):
@@ -2528,7 +2504,7 @@ class NSAPRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<NSAPRecord>: {}'.format(self._nsap)
+        return f'<NSAPRecord>: {self._nsap}'
 
     def __repr__(self):
         """print override"""
@@ -2586,8 +2562,7 @@ class RPRecord(DNSRecord):
         """Return this :class:`~dyn.tm.records.RPRecord`'s rdata as a JSON blob
         """
         guts = super(RPRecord, self).rdata()
-        shell = {'rp_rdata': guts}
-        return shell
+        return {'rp_rdata': guts}
 
     @property
     def mbox(self):
@@ -2621,7 +2596,7 @@ class RPRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<PRRecord>: {}'.format(self._txtdname)
+        return f'<PRRecord>: {self._txtdname}'
 
     def __repr__(self):
         """print override"""
@@ -2676,8 +2651,7 @@ class NSRecord(DNSRecord):
         """Return this :class:`~dyn.tm.records.NSRecord`'s rdata as a JSON blob
         """
         guts = super(NSRecord, self).rdata()
-        shell = {'ns_rdata': guts}
-        return shell
+        return {'ns_rdata': guts}
 
     @property
     def nsdname(self):
@@ -2708,7 +2682,7 @@ class NSRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<NSRecord>: {}'.format(self._nsdname)
+        return f'<NSRecord>: {self._nsdname}'
 
     def __repr__(self):
         """print override"""
@@ -2741,9 +2715,6 @@ class SOARecord(DNSRecord):
                 self._get_record(kwargs['record_id'])
             elif len(args) > 0:
                 self._get_record(*args)
-            else:
-                # Users can not POST or DELETE SOA Records
-                pass
             self.api_args = {'rdata': {'rname': self._rname}}
 
     def rdata(self):
@@ -2751,8 +2722,7 @@ class SOARecord(DNSRecord):
         blob
         """
         guts = super(SOARecord, self).rdata()
-        shell = {'soa_rdata': guts}
-        return shell
+        return {'soa_rdata': guts}
 
     @property
     def rname(self):
@@ -2860,8 +2830,7 @@ class SPFRecord(DNSRecord):
         blob
         """
         guts = super(SPFRecord, self).rdata()
-        shell = {'spf_rdata': guts}
-        return shell
+        return {'spf_rdata': guts}
 
     @property
     def txtdata(self):
@@ -2878,7 +2847,7 @@ class SPFRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<SPFRecord>: {}'.format(self._txtdata)
+        return f'<SPFRecord>: {self._txtdata}'
 
     def __repr__(self):
         """print override"""
@@ -2944,8 +2913,7 @@ class SRVRecord(DNSRecord):
         blob
         """
         guts = super(SRVRecord, self).rdata()
-        shell = {'srv_rdata': guts}
-        return shell
+        return {'srv_rdata': guts}
 
     @property
     def port(self):
@@ -3008,7 +2976,7 @@ class SRVRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<SRVRecord>: {}'.format(self._target)
+        return f'<SRVRecord>: {self._target}'
 
     def __repr__(self):
         """print override"""
@@ -3075,8 +3043,7 @@ class SSHFPRecord(DNSRecord):
         blob
         """
         guts = super(SSHFPRecord, self).rdata()
-        shell = {'sshfp_rdata': guts}
-        return shell
+        return {'sshfp_rdata': guts}
 
     @property
     def algorithm(self):
@@ -3119,7 +3086,7 @@ class SSHFPRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<SSHFPRecord>: {}'.format(self._fingerprint)
+        return f'<SSHFPRecord>: {self._fingerprint}'
 
     def __repr__(self):
         """print override"""
@@ -3191,8 +3158,7 @@ class TLSARecord(DNSRecord):
         """Return this :class:`~dyn.tm.records.TLSARecord`'s rdata as a JSON blob
         """
         guts = super(TLSARecord, self).rdata()
-        shell = {'tlsa_rdata': guts}
-        return shell
+        return {'tlsa_rdata': guts}
 
     @property
     def cert_usage(self):
@@ -3255,7 +3221,7 @@ class TLSARecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<TLSARecord>: {}'.format(self._certificate)
+        return f'<TLSARecord>: {self._certificate}'
 
     def __repr__(self):
         """print override"""
@@ -3307,8 +3273,7 @@ class TXTRecord(DNSRecord):
         blob
         """
         guts = super(TXTRecord, self).rdata()
-        shell = {'txt_rdata': guts}
-        return shell
+        return {'txt_rdata': guts}
 
     @property
     def txtdata(self):
@@ -3325,7 +3290,7 @@ class TXTRecord(DNSRecord):
 
     def __str__(self):
         """str override"""
-        return '<TXTRecord>: {}'.format(self._txtdata)
+        return f'<TXTRecord>: {self._txtdata}'
 
     def __repr__(self):
         """print override"""

@@ -68,8 +68,7 @@ if is_py2:
         Dyn Message Management API formatted string.  Any supplied time
         zone in the input will be ignored (due to a bug in python 2).
         """
-        date_string = date_obj.strftime(API_FMT)
-        return date_string
+        return date_obj.strftime(API_FMT)
 
 
 elif is_py3:
@@ -105,5 +104,5 @@ elif is_py3:
         """
         date_string = date_obj.strftime(API_FMT)
         if date_string[-3] != ':':
-            date_string = date_string[:-2] + ':' + date_string[-2:]
+            date_string = f'{date_string[:-2]}:{date_string[-2:]}'
         return date_string
